@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+*.secret
+*.key
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / React
+node_modules/
+web/dist/
+.vite/
+
+# Docker volumes and data
+**/data/
+**/clickhouse-data/
+**/postgres-data/
+**/grafana-data/
+**/prometheus-data/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets / API keys
+*.env
+secrets.json
+api_keys.json
