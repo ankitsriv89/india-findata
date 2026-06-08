@@ -1,0 +1,9 @@
+[
+  {"quarter": "Q1 2023-24", "growth_rate": "7.8"},
+  {"quarter": "Q2 2023-24", "growth_rate": "7.6"},
+  {"quarter": "Q3 2023-24", "growth_rate": "8.4"},
+  {"quarter": "Q4 2023-24", "growth_rate": "7.4"},
+  {"quarter": "Q1 2024-25", "growth_rate": "6.7"},
+  {"quarter": "INVALID",    "growth_rate": "5.0"},
+  {"quarter": "Q2 2024-25", "growth_rate": "N/A"}
+]

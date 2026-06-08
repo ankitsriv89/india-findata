@@ -1,0 +1,47 @@
+/* Shared styles for all chart components */
+
+.chart-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chart-wrapper__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 0.875rem;
+}
+
+.chart-wrapper__title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.chart-wrapper__subtitle {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.chart-wrapper__body {
+  flex: 1;
+  min-height: 240px;
+}
+
+/* Loading spinner */
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-saffron);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

@@ -1,0 +1,8 @@
+[
+  {"month": "2024-01", "value": "190.3", "series": "CPI_GENERAL", "release": "final"},
+  {"month": "2024-02", "value": "191.7", "series": "CPI_GENERAL", "release": "final"},
+  {"month": "2024-03", "value": "193.2", "series": "CPI_GENERAL", "release": "final"},
+  {"month": "2024-04", "value": "194.8", "series": "CPI_GENERAL", "release": "provisional"},
+  {"month": "2024-05", "value": "-",     "series": "CPI_GENERAL", "release": "provisional"},
+  {"month": "2024-06", "value": null,    "series": "CPI_GENERAL", "release": "provisional"}
+]

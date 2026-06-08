@@ -1,0 +1,88 @@
+/* Layout — app shell */
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ── Header ──────────────────────────────────────────────── */
+
+.layout__header {
+  display: flex;
+  align-items: center;
+  padding: 0 1.5rem;
+  height: 56px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.layout__brand {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.layout__brand-flag { font-size: 1.25rem; }
+
+.layout__brand-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+.layout__brand-sub {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+/* ── Tab bar ─────────────────────────────────────────────── */
+
+.layout__tabs {
+  display: flex;
+  gap: 0;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 1.5rem;
+  flex-shrink: 0;
+}
+
+.layout__tab {
+  padding: 0.75rem 1.25rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.layout__tab:hover {
+  color: var(--color-text);
+}
+
+.layout__tab--active {
+  color: var(--color-saffron);
+  border-bottom-color: var(--color-saffron);
+}
+
+/* ── Main content area ───────────────────────────────────── */
+
+.layout__content {
+  flex: 1;
+  padding: 1.5rem;
+  max-width: 1600px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .layout__content { padding: 1rem; }
+  .layout__brand-sub { display: none; }
+  .layout__tab { padding: 0.75rem 0.75rem; font-size: 0.8rem; }
+}

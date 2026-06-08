@@ -1,0 +1,28 @@
+.pipeline-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.pipeline-panel__section-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  margin-bottom: 0.875rem;
+}
+
+.pipeline-panel__error-row td {
+  background: rgba(229, 62, 62, 0.06);
+  padding: 0.5rem 0.75rem;
+}
+
+.pipeline-panel__error {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-red);
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+}

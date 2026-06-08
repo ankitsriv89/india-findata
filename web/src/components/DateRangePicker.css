@@ -1,0 +1,59 @@
+.drp {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.drp__presets {
+  display: flex;
+  gap: 4px;
+}
+
+.drp__preset {
+  padding: 4px 10px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.drp__preset:hover {
+  border-color: var(--color-saffron);
+  color: var(--color-saffron);
+}
+
+.drp__inputs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.drp__input {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  outline: none;
+}
+
+.drp__input:focus {
+  border-color: var(--color-saffron);
+}
+
+/* Style the date picker calendar icon */
+.drp__input::-webkit-calendar-picker-indicator {
+  filter: invert(0.6);
+  cursor: pointer;
+}
+
+.drp__sep {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}

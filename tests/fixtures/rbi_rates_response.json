@@ -1,0 +1,8 @@
+[
+  {"effective_date": "2023-02-08", "repo_rate": "6.50", "reverse_repo_rate": "3.35"},
+  {"effective_date": "2023-04-06", "repo_rate": "6.50", "reverse_repo_rate": "3.35"},
+  {"effective_date": "2024-02-08", "repo_rate": "6.50", "reverse_repo_rate": "3.35"},
+  {"effective_date": "invalid-date", "repo_rate": "6.50", "reverse_repo_rate": "3.35"},
+  {"effective_date": "2024-06-07", "repo_rate": "not_a_number", "reverse_repo_rate": "3.35"},
+  {"effective_date": "2024-08-08", "repo_rate": "6.50", "reverse_repo_rate": "3.35"}
+]
