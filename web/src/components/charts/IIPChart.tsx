@@ -53,13 +53,17 @@ export default function IIPChart({ from, to }: Props) {
   const isLoading = results.some(r => r.query.isLoading)
   const isError   = results.some(r => r.query.isError)
 
-  // Merge all series into one array keyed by date
-  const byDate = new Map<string, Record<string, number>>()
+  // Merge all series into one array keyed by date.
+  // Each row holds a `date` string label plus one numeric value per series key,
+  // so the value type is `number | string` (Recharts reads the numbers, the
+  // XAxis reads the date string).
+  const byDate = new Map<string, Record<string, number | string>>()
   for (const { key, query } of results) {
     for (const point of query.data?.data ?? []) {
       const month = point.date.slice(0, 7)
       if (!byDate.has(month)) byDate.set(month, { date: month })
-      byDate.get(month)![key] = point.value
+      // API serialises numeric values as strings; Recharts needs real numbers.
+      byDate.get(month)![key] = Number(point.value)
     }
   }
   const chartData = Array.from(byDate.values()).sort((a, b) =>

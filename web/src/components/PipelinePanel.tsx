@@ -94,7 +94,7 @@ export default function PipelinePanel() {
               </tr>
             </thead>
             <tbody>
-              {(historyRows ?? []).map((row: PipelineRun, i: number) => {
+              {(historyRows ?? []).map((row: PipelineRun) => {
                 const rowKey = `${row.source}-${row.started_at}`
                 const isExpanded = expandedId === rowKey
                 return [

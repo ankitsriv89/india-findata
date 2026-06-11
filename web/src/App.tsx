@@ -43,7 +43,7 @@ export default function App() {
   }, [])
 
   return (
-    <Layout tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab}>
+    <Layout tabs={TABS} activeTab={activeTab} onTabChange={(id) => setActiveTab(id as Tab)}>
       {activeTab === 'macro'       && <MacroPanel />}
       {activeTab === 'markets'     && <ComingSoon label="Markets" note="Phase 2 — NSE/BSE bhavcopy, FII/DII flows" />}
       {activeTab === 'correlation' && <ComingSoon label="Correlation" note="Phase 4 — cross-domain correlation explorer" />}
