@@ -64,8 +64,15 @@ variable "instance_type" {
 }
 
 variable "key_name" {
-  description = "Name of an existing EC2 key pair for SSH access."
+  description = "Name to register the imported EC2 key pair under (see public_key_path)."
   type        = string
+  default     = "india-findata-key"
+}
+
+variable "public_key_path" {
+  description = "Path to the local SSH public key to import as the EC2 key pair."
+  type        = string
+  default     = "~/.ssh/id_ed25519.pub"
 }
 
 variable "allowed_cidr" {
@@ -117,6 +124,18 @@ data "aws_subnets" "default" {
     name   = "vpc-id"
     values = [data.aws_vpc.default.id]
   }
+}
+
+# =============================================================================
+# SSH Key Pair — import the local public key so we can SSH with the matching
+# private key. AWS key_name must reference a registered key pair; importing
+# here keeps the whole setup declarative (no manual console step).
+# =============================================================================
+
+resource "aws_key_pair" "findata" {
+  key_name   = var.key_name
+  public_key = file(pathexpand(var.public_key_path))
+  tags       = { Name = var.project_name }
 }
 
 # =============================================================================
@@ -182,9 +201,27 @@ resource "aws_security_group" "findata" {
 resource "aws_instance" "findata" {
   ami                    = data.aws_ami.al2023.id
   instance_type          = var.instance_type
-  key_name               = var.key_name
+  key_name               = aws_key_pair.findata.key_name
   subnet_id              = tolist(data.aws_subnets.default.ids)[0]
   vpc_security_group_ids = [aws_security_group.findata.id]
+
+  # Spot instance request, toggled by var.use_spot (~70% cheaper, interruptible).
+  # Using instance_market_options on a regular aws_instance is the modern AWS
+  # approach — one resource, EBS/EIP wiring below stays intact regardless of mode.
+  # "stop" interruption_behavior + persistent type means the instance stops (not
+  # terminates) on interruption, so the data EBS volume and EIP survive and the
+  # box can be restarted. dynamic{} emits the block only when use_spot is true.
+  dynamic "instance_market_options" {
+    for_each = var.use_spot ? [1] : []
+    content {
+      market_type = "spot"
+      spot_options {
+        max_price                      = var.spot_max_price
+        spot_instance_type             = "persistent"
+        instance_interruption_behavior = "stop"
+      }
+    }
+  }
 
   # Root volume: OS + Docker images (~16 GB is plenty)
   root_block_device {
@@ -255,5 +292,5 @@ output "grafana_url" {
 
 output "ssh_command" {
   description = "SSH into the server"
-  value       = "ssh -i ~/.ssh/${var.key_name}.pem ec2-user@${aws_eip.findata.public_ip}"
+  value       = "ssh -i ${replace(var.public_key_path, ".pub", "")} ec2-user@${aws_eip.findata.public_ip}"
 }

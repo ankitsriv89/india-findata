@@ -41,3 +41,14 @@ Thumbs.db
 *.env
 secrets.json
 api_keys.json
+
+# Terraform — never commit state (contains resource details), local vars
+# (may hold credentials), plan files, or the provider cache.
+infra/terraform/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+tfplan
+*.tfplan
+crash.log

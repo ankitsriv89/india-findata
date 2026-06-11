@@ -59,11 +59,11 @@ systemctl restart docker
 # ── 3. Set up the application ─────────────────────────────────────────────────
 APP_DIR="/home/ec2-user/${project_name}"
 
-if [ ! -d "$APP_DIR" ]; then
-    # Clone from GitHub if a remote exists, otherwise create a placeholder
-    # Replace this URL with your actual GitHub remote before deploying
-    git clone https://github.com/YOUR_USERNAME/${project_name}.git "$APP_DIR" 2>/dev/null || \
-        mkdir -p "$APP_DIR"
+if [ ! -d "$APP_DIR/.git" ]; then
+    # Clone the public repo over HTTPS (no auth needed). Fail loudly if the
+    # clone doesn't work — an empty APP_DIR would make `docker compose up` run
+    # in a directory with no compose file, which is a confusing failure mode.
+    git clone https://github.com/ankitsriv89/${project_name}.git "$APP_DIR"
 fi
 
 chown -R ec2-user:ec2-user "$APP_DIR"
