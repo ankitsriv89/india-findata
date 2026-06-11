@@ -19,11 +19,16 @@ RUN pip install --no-cache-dir uv
 # Copy dependency manifests first (layer cache: rebuilds deps only when these change)
 COPY pyproject.toml .
 
-# Install all production dependencies into a venv at /build/.venv
-# --no-dev skips pytest/ruff/mypy which aren't needed in the container
+# Install all production dependencies into a venv at /build/.venv.
+#
+# We compile pyproject.toml's [project.dependencies] to a pinned requirements
+# file, then install from it. Two reasons for the file (vs. `<(...)` process
+# substitution): Docker's RUN uses /bin/sh, where process substitution is a
+# syntax error; and a concrete file is easier to debug. The dev extras
+# (pytest/ruff/mypy) are intentionally omitted — not needed at runtime.
 RUN uv venv .venv && \
-    uv pip install --python .venv/bin/python -r <(uv pip compile pyproject.toml --no-dev) || \
-    uv pip install --python .venv/bin/python .
+    uv pip compile pyproject.toml -o requirements.txt && \
+    uv pip install --python .venv/bin/python -r requirements.txt
 
 # ── Stage 2: runtime ──────────────────────────────────────────────────────────
 FROM python:3.12-slim AS runtime
