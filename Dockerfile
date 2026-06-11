@@ -11,7 +11,12 @@
 # ── Stage 1: builder ──────────────────────────────────────────────────────────
 FROM python:3.12-slim AS builder
 
-WORKDIR /build
+# IMPORTANT: build the venv at /app, the SAME path the runtime stage uses.
+# uv writes absolute shebangs into console scripts (e.g. uvicorn starts with
+# `#!/app/.venv/bin/python`). If the builder used a different dir (e.g. /build),
+# the copied venv's scripts would point at a path that doesn't exist at runtime,
+# and `exec .../uvicorn` fails with "no such file or directory".
+WORKDIR /app
 
 # Install uv — the package manager used by this project (much faster than pip)
 RUN pip install --no-cache-dir uv
@@ -19,7 +24,7 @@ RUN pip install --no-cache-dir uv
 # Copy dependency manifests first (layer cache: rebuilds deps only when these change)
 COPY pyproject.toml .
 
-# Install all production dependencies into a venv at /build/.venv.
+# Install all production dependencies into a venv at /app/.venv.
 #
 # We compile pyproject.toml's [project.dependencies] to a pinned requirements
 # file, then install from it. Two reasons for the file (vs. `<(...)` process
@@ -35,8 +40,9 @@ FROM python:3.12-slim AS runtime
 
 WORKDIR /app
 
-# Copy the virtual environment from builder
-COPY --from=builder /build/.venv /app/.venv
+# Copy the virtual environment from builder. Same path (/app/.venv) in both
+# stages so the venv's absolute script shebangs stay valid at runtime.
+COPY --from=builder /app/.venv /app/.venv
 
 # Copy application source
 COPY pipeline/ ./pipeline/
