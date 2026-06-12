@@ -23,17 +23,17 @@ Shutdown sequence:
 """
 
 import logging
-import structlog
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 import asyncpg
+import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from pipeline.config import settings
 import pipeline.store.clickhouse as ch_store
 import pipeline.store.postgres as pg_store
+from pipeline.config import settings
 from pipeline.scheduler import create_scheduler
 
 # ── Logging setup ────────────────────────────────────────────────────────────
@@ -188,9 +188,10 @@ app.add_middleware(
 )
 
 # Register route modules (imported here to avoid circular imports)
-from api.routes import macro, pipeline_routes  # noqa: E402
+from api.routes import macro, markets, pipeline_routes  # noqa: E402
 
 app.include_router(macro.router, prefix="/macro", tags=["macro"])
+app.include_router(markets.router, prefix="/markets", tags=["markets"])
 app.include_router(pipeline_routes.router, prefix="/pipeline", tags=["pipeline"])
 
 

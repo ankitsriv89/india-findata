@@ -10,6 +10,7 @@
 import { useState, useEffect } from 'react'
 import Layout from './components/Layout'
 import MacroPanel from './components/MacroPanel'
+import MarketsPanel from './components/MarketsPanel'
 import PipelinePanel from './components/PipelinePanel'
 import './styles/app.css'
 
@@ -45,7 +46,7 @@ export default function App() {
   return (
     <Layout tabs={TABS} activeTab={activeTab} onTabChange={(id) => setActiveTab(id as Tab)}>
       {activeTab === 'macro'       && <MacroPanel />}
-      {activeTab === 'markets'     && <ComingSoon label="Markets" note="Phase 2 — NSE/BSE bhavcopy, FII/DII flows" />}
+      {activeTab === 'markets'     && <MarketsPanel />}
       {activeTab === 'correlation' && <ComingSoon label="Correlation" note="Phase 4 — cross-domain correlation explorer" />}
       {activeTab === 'pipeline'    && <PipelinePanel />}
     </Layout>

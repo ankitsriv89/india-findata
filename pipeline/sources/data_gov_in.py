@@ -29,11 +29,11 @@ by querying the API and checking the field names before building on them.
 """
 
 import time
-import structlog
 from datetime import date, datetime
 from typing import Any
 
 import httpx
+import structlog
 from pydantic import ValidationError
 
 from pipeline.schema.record import Record
@@ -140,7 +140,10 @@ class RBIRatesSource(Source):
         note which alternatives to try if the primary name fails.
         """
         try:
-            rec = DataGovInRecord(raw)
+            # pydantic v2: validate a raw dict via model_validate() — calling
+            # DataGovInRecord(raw) positionally raises TypeError under pydantic
+            # 2.x (BaseModel.__init__ only accepts keyword args).
+            rec = DataGovInRecord.model_validate(raw)
         except ValidationError as exc:
             log.warning("rbi_rates.parse_skip", raw=raw, error=str(exc))
             return []
@@ -323,7 +326,7 @@ class RBIForexSource(Source):
           "forex_reserves" — total reserves in USD billion
         """
         try:
-            rec = DataGovInRecord(raw)
+            rec = DataGovInRecord.model_validate(raw)  # see _parse_rate_record
         except ValidationError:
             return None
 

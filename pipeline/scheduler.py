@@ -24,17 +24,20 @@ Job execution model:
   logged via structlog, and written to pipeline_runs.error_msg.
 """
 
-import structlog
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 
+import structlog
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from pipeline.config import settings
-from pipeline.sources.mospi import MOSPISource, MOSPIGDPSource
-from pipeline.sources.data_gov_in import RBIRatesSource, RBIForexSource
 import pipeline.store.clickhouse as ch_store
 import pipeline.store.postgres as pg_store
+from pipeline.config import settings
+from pipeline.sources.bse import BSEBhavcopySource
+from pipeline.sources.data_gov_in import RBIForexSource, RBIRatesSource
+from pipeline.sources.mospi import MOSPIGDPSource, MOSPISource
+from pipeline.sources.nse import NSEBhavcopySource
+from pipeline.sources.sebi import FIIDIISource
 
 log = structlog.get_logger()
 
@@ -65,7 +68,7 @@ def _run_job(
 
     try:
         run_id = pg_store.start_run(pg_pool, source_name, job_id)
-        today = datetime.now(timezone.utc).date()
+        today = datetime.now(UTC).date()
 
         records = source_obj.fetch(today)
         rows_fetched = len(records)
@@ -130,6 +133,11 @@ def create_scheduler(ch_client, pg_pool) -> BackgroundScheduler:
     rbi_rates_src = RBIRatesSource(api_key=settings.data_gov_in_api_key)
     rbi_forex_src = RBIForexSource(api_key=settings.data_gov_in_api_key)
 
+    # Phase 2 — Markets sources (no credentials needed: public bulk files)
+    nse_src = NSEBhavcopySource()
+    bse_src = BSEBhavcopySource()
+    fii_dii_src = FIIDIISource()
+
     # Helper to DRY up job registration
     def add(source_obj, job_id: str, trigger: CronTrigger) -> None:
         scheduler.add_job(
@@ -174,6 +182,25 @@ def create_scheduler(ch_client, pg_pool) -> BackgroundScheduler:
         rbi_forex_src,
         "rbi_forex",
         CronTrigger(day_of_week="fri", hour=19, minute=0, timezone=settings.tz),
+    )
+
+    # ── Phase 2: Markets — daily after market close (Mon–Fri) ──────────────────
+    # NSE bhavcopy is available ~7 PM IST; BSE shortly after; FII/DII ~7:30 PM.
+    # CronTrigger with day_of_week="mon-fri" skips weekends (no trading file).
+    add(
+        nse_src,
+        "nse_bhavcopy",
+        CronTrigger(day_of_week="mon-fri", hour=19, minute=0, timezone=settings.tz),
+    )
+    add(
+        bse_src,
+        "bse_bhavcopy",
+        CronTrigger(day_of_week="mon-fri", hour=19, minute=15, timezone=settings.tz),
+    )
+    add(
+        fii_dii_src,
+        "fii_dii",
+        CronTrigger(day_of_week="mon-fri", hour=19, minute=30, timezone=settings.tz),
     )
 
     return scheduler

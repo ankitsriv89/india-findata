@@ -18,10 +18,10 @@ Deduplication:
   - Always query with FINAL to get the deduplicated view.
 """
 
-import structlog
 from typing import TYPE_CHECKING
 
 import clickhouse_connect
+import structlog
 
 from pipeline.schema.record import Record
 

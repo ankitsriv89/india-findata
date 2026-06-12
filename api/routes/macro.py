@@ -22,11 +22,11 @@ All date parameters are strings in YYYY-MM-DD format.  FastAPI coerces
 them to datetime.date via the date type annotation.
 """
 
-import structlog
 from datetime import date
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request, Query
+import structlog
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 
 log = structlog.get_logger()
@@ -62,6 +62,7 @@ def _query_records(
     from_date: date,
     to_date: date,
     extra_where: str = "",
+    extra_params: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """
     Execute a ClickHouse query against the records table.
@@ -70,12 +71,17 @@ def _query_records(
     Always filters on date range first (uses partition pruning).
 
     Args:
-        request:     FastAPI request (for app.state.ch_client access)
-        source:      records.source filter
-        series:      records.series filter
-        from_date:   inclusive start date
-        to_date:     inclusive end date
-        extra_where: optional additional WHERE clause fragment (must start with AND)
+        request:      FastAPI request (for app.state.ch_client access)
+        source:       records.source filter
+        series:       records.series filter
+        from_date:    inclusive start date
+        to_date:      inclusive end date
+        extra_where:  optional additional WHERE clause fragment (must start with
+                      AND).  Use {name:Type} placeholders for any user input and
+                      pass the values via extra_params — NEVER interpolate input
+                      into this string (SQL-injection safety, same as the base
+                      bound params below).
+        extra_params: values for any placeholders introduced by extra_where.
 
     Returns:
         List of {"date": "YYYY-MM-DD", "value": float} dicts, ordered by date.
@@ -96,19 +102,20 @@ def _query_records(
         ORDER BY date
     """
 
+    params: dict[str, Any] = {
+        "source": source,
+        "series": series,
+        "from_date": from_date.isoformat(),
+        "to_date": to_date.isoformat(),
+    }
+    if extra_params:
+        params.update(extra_params)
+
     try:
-        result = ch.query(
-            query,
-            parameters={
-                "source": source,
-                "series": series,
-                "from_date": from_date.isoformat(),
-                "to_date": to_date.isoformat(),
-            },
-        )
+        result = ch.query(query, parameters=params)
     except Exception as exc:
         log.error("macro.query_failed", source=source, series=series, error=str(exc))
-        raise HTTPException(status_code=503, detail=f"ClickHouse query failed: {exc}")
+        raise HTTPException(status_code=503, detail=f"ClickHouse query failed: {exc}") from exc
 
     rows = [{"date": str(row[0]), "value": row[1]} for row in result.result_rows]
 

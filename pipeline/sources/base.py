@@ -16,9 +16,10 @@ Design principles:
     calls) — never create a new client per request.
 """
 
-import structlog
 from abc import ABC, abstractmethod
 from datetime import date
+
+import structlog
 
 from pipeline.schema.record import Record
 

@@ -27,6 +27,36 @@ export interface TimeSeriesResponse {
   data: Array<{ date: string; value: number }>
 }
 
+/** One symbol's day move (from /markets/movers) */
+export interface Mover {
+  symbol: string
+  close: number
+  prev_close: number
+  change_pct: number
+}
+
+/** Top gainers/losers snapshot from /markets/movers */
+export interface MoversResponse {
+  exchange: string
+  date: string
+  gainers: Mover[]
+  losers: Mover[]
+}
+
+/** One sector cell from /markets/heatmap */
+export interface HeatmapCell {
+  sector: string
+  change_pct: number
+  symbols: number
+}
+
+/** Sector heatmap grid from /markets/heatmap */
+export interface HeatmapResponse {
+  exchange: string
+  date: string
+  cells: HeatmapCell[]
+}
+
 /** One pipeline run row */
 export interface PipelineRun {
   source: string

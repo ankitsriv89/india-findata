@@ -98,3 +98,69 @@ All Phase 1 data sources, their fields, cadence, and example values.
 | Tags | `published_by: "rbi"` |
 
 **Example**: India's forex reserves were ~$650 billion in mid-2024. These reserves let RBI intervene in currency markets to defend the INR.
+
+---
+
+# Phase 2 — Markets Layer
+
+## NSE Bhavcopy — Equity End-of-Day (OHLC + Volume)
+
+| Field | Value |
+|-------|-------|
+| Source name | `nse_bhavcopy` |
+| Series | One per symbol (e.g. `TCS`, `RELIANCE`, `INFY`) |
+| Dimension | `open_price`, `high_price`, `low_price`, `close_price`, `volume` |
+| Granularity | `daily` |
+| Unit | `INR` (prices), `shares` (volume) |
+| Region | `india` |
+| API | `archives.nseindia.com` — public ZIP-compressed CSV bhavcopy |
+| Release schedule | Daily after market close (~7 PM IST), Mon–Fri |
+| Tags | `exchange: "NSE"`, `isin`, `series: "EQ"` |
+
+**Quirks**: file is a ZIP containing one CSV; we unzip in-memory. Only `SERIES == "EQ"`
+rows are kept (BE/BL/GS settlement series are dropped). Suspended scrips have blank
+prices — those rows are skipped, never inserted as NaN. ~2000 symbols × 5 dimensions
+≈ 10k records/day, chunked into ~10 inserts of 1000.
+
+**URL pattern**: `…/EQUITIES/<YYYY>/<MON>/cm<DD><MON><YYYY>bhav.csv.zip`
+(e.g. `cm02JUN2026bhav.csv.zip`).
+
+## BSE Bhavcopy — Equity End-of-Day
+
+| Field | Value |
+|-------|-------|
+| Source name | `bse_bhavcopy` |
+| Series | One per symbol (`SC_NAME`) |
+| Dimension | `open_price`, `high_price`, `low_price`, `close_price`, `volume` |
+| Granularity | `daily` |
+| Unit | `INR` / `shares` |
+| Region | `india` |
+| API | `bseindia.com/download/BhavCopy/Equity` — public ZIP CSV |
+| Release schedule | Daily after close, Mon–Fri |
+| Tags | `exchange: "BSE"`, `isin`, `sc_code`, `group` |
+
+**Quirks**: BSE uses different column names (`SC_NAME`/`SC_GROUP`/`NO_OF_SHRS`) than NSE.
+Equity rows are those whose `SC_GROUP` is an equity group (A/B/T/Z/M/X…); debt/derivative
+groups are dropped. URL date is `DDMMYY` (e.g. `EQ_ISINCODE_020626.ZIP`).
+
+## FII/DII — Institutional Net Equity Flows
+
+| Field | Value |
+|-------|-------|
+| Source name | `fii_dii` |
+| Series | `FII_NET_EQUITY`, `DII_NET_EQUITY` |
+| Dimension | `net_flow` |
+| Granularity | `daily` |
+| Unit | `crore_INR` |
+| Region | `india` |
+| API | NSE FII/DII report CSV (published on behalf of SEBI) |
+| Release schedule | Daily ~7:30 PM IST, Mon–Fri |
+| Tags | `category` (raw report label) |
+
+**Quirks**: net flow may be **negative** (net selling) — that's valid data, not an error,
+so the validator rejects only missing/non-numeric values, never the sign. The live URL is
+fragile (may require session cookies / move); the source is best-effort — a fetch failure
+logs and returns nothing rather than crashing the scheduler. Fully fixture-tested offline.
+
+**Example**: On a risk-off day FII might be −1,234 cr (net sell) while DII is +1,035 cr
+(net buy), a classic counter-flow pattern.

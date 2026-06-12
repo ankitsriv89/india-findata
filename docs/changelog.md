@@ -4,6 +4,42 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ---
 
+## [0.2.0] — 2026-06-12
+
+### Added
+
+**Markets sources (Phase 2)**
+- `pipeline/sources/nse.py` — `NSEBhavcopySource`: daily NSE equity bhavcopy (ZIP→CSV, in-memory unzip, EQ-only filter), OHLC + volume Records per symbol
+- `pipeline/sources/bse.py` — `BSEBhavcopySource`: daily BSE equity bhavcopy (different columns, SC_GROUP equity filter)
+- `pipeline/sources/sebi.py` — `FIIDIISource`: daily FII/DII net equity flows (negatives valid; best-effort live URL)
+- `pipeline/schema/validators.py` — `BhavcopyRow` and `FIIDIIRow` pydantic models (skip-bad-rows, never insert NaN)
+
+**API routes**
+- `GET /markets/equity` — per-symbol daily OHLC/volume series (`TimeSeriesResponse`)
+- `GET /markets/fii` — FII/DII net flow series
+- `GET /markets/movers` — top gainers/losers for a date (close vs prev-close %change in ClickHouse)
+- `GET /markets/heatmap` — sector → average %change grid
+- `_query_records` gained an `extra_params` argument for safe parameter binding in `extra_where`
+
+**Frontend**
+- `web/src/components/MarketsPanel.tsx` — Markets tab (replaces the Phase 2 placeholder)
+- `charts/IndexChart.tsx`, `charts/FIIDIIChart.tsx`, `TopMoversTable.tsx`
+- `charts/SectorHeatmap.tsx` — **first D3 usage** (React owns the `<svg>`, D3 draws inside via `useRef`+`useEffect`)
+- `api/hooks.ts` — `useEquity`, `useFIIDII`, `useMovers`, `useHeatmap`
+
+**Tests / fixtures**
+- `tests/test_nse.py`, `tests/test_bse.py`, `tests/test_sebi.py` (15 tests) with committed CSV fixtures
+
+### Fixed
+- `pyproject.toml` — added `[tool.hatch.build.targets.wheel]` packages list so `uv sync`/`uv run` (and wheel builds) work; the default heuristic couldn't find `pipeline`/`api`/`scripts`
+- `pipeline/sources/data_gov_in.py` — `DataGovInRecord(raw)` → `DataGovInRecord.model_validate(raw)` (pydantic v2 rejects positional construction; this was breaking 5 Phase 1 tests)
+- `[tool.ruff.lint.flake8-bugbear]` `extend-immutable-calls` for FastAPI `Query`/`Depends` (silences B008 on endpoint signatures); added `from exc` on `raise HTTPException` sites (B904); repo-wide `ruff --fix` (UP017/UP035/SIM117/I001) — `ruff check .` is now clean
+
+### Notes
+- Phase 1 source files (mospi/data_gov_in/scheduler/main) still have pre-existing `mypy --strict` findings; all **new** Phase 2 code is mypy-clean. Strict-mypy cleanup of Phase 1 is tracked separately.
+
+---
+
 ## [0.1.0] — 2026-06-08
 
 ### Added

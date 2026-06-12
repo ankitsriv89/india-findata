@@ -21,16 +21,22 @@ from datetime import date, datetime
 
 import structlog
 
-from pipeline.config import settings
-from pipeline.sources.mospi import MOSPISource, MOSPIGDPSource
-from pipeline.sources.data_gov_in import RBIRatesSource, RBIForexSource
 import pipeline.store.clickhouse as ch_store
 import pipeline.store.postgres as pg_store
+from pipeline.config import settings
+from pipeline.sources.bse import BSEBhavcopySource
+from pipeline.sources.data_gov_in import RBIForexSource, RBIRatesSource
+from pipeline.sources.mospi import MOSPIGDPSource, MOSPISource
+from pipeline.sources.nse import NSEBhavcopySource
+from pipeline.sources.sebi import FIIDIISource
 
 log = structlog.get_logger()
 
-# All Phase 1 sources that the backfill script knows about
-_SOURCE_NAMES = ["mospi_cpi", "mospi_gdp", "rbi_rates", "rbi_forex"]
+# All sources the backfill script knows about (Phase 1 macro + Phase 2 markets)
+_SOURCE_NAMES = [
+    "mospi_cpi", "mospi_gdp", "rbi_rates", "rbi_forex",
+    "nse_bhavcopy", "bse_bhavcopy", "fii_dii",
+]
 
 
 def _build_sources(settings) -> dict:
@@ -43,6 +49,10 @@ def _build_sources(settings) -> dict:
         "mospi_gdp": MOSPIGDPSource(datagov_api_key=settings.data_gov_in_api_key),
         "rbi_rates": RBIRatesSource(api_key=settings.data_gov_in_api_key),
         "rbi_forex": RBIForexSource(api_key=settings.data_gov_in_api_key),
+        # Phase 2 markets — public bulk files, no credentials
+        "nse_bhavcopy": NSEBhavcopySource(),
+        "bse_bhavcopy": BSEBhavcopySource(),
+        "fii_dii": FIIDIISource(),
     }
 
 

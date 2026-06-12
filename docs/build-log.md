@@ -80,3 +80,37 @@ tests/test_data_gov_in.py::test_rbi_rates_skips_missing_date PASSED
 ruff check .
 mypy pipeline/
 ```
+
+## Phase 2 (0.2.0) — Markets layer
+
+No new Python runtime dependencies (NSE/BSE/FII data are public bulk files parsed
+with the stdlib `csv`, `zipfile`, and `io` modules — no pandas, per CLAUDE.md).
+Frontend uses the already-present `d3` for the sector heatmap.
+
+**Build fix**: `pyproject.toml` now declares
+`[tool.hatch.build.targets.wheel] packages = ["pipeline", "api", "scripts"]`.
+Without it, `uv sync` / `uv run` fail with "Unable to determine which files to
+ship inside the wheel" because no top-level dir matches the project name.
+
+**Running the tests** — a system ROS install (`/opt/ros/jazzy`) leaks a broken
+`launch_testing` pytest plugin via `PYTHONPATH`. Run with plugin autoload off and
+a clean PYTHONPATH:
+
+```bash
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH="" \
+  uv run pytest tests/ -p pytest_asyncio -p no:cacheprovider -q
+```
+
+Phase 2 test output (15 new tests; 38 total):
+```
+tests/test_nse.py ......        [ filters EQ, skips bad rows, 5 records/symbol,
+                                  dimensions, field values, batch-chunk math ]
+tests/test_bse.py ....          [ equity-group filter, skips bad rows,
+                                  5 records/symbol, BSE tag fields ]
+tests/test_sebi.py .....        [ category mapping, negative net kept,
+                                  skips unknown/missing, fields, date parsing ]
+38 passed
+```
+
+Frontend build (`cd web && npm install && npm run build`): `tsc && vite build`
+clean — 1306 modules, ~682 kB JS (198 kB gzip).

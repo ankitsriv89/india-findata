@@ -180,3 +180,78 @@ scheduler.add_job(fn, coalesce=True, max_instances=1)
 ```
 
 `coalesce=True`: if the server was down and missed 3 scheduled fires, run the job once when it comes back (not 3 times). `max_instances=1`: if a fetch takes longer than the schedule interval, don't start a second instance in parallel.
+
+---
+
+## Phase 2: Trace a bhavcopy fetch (Markets layer)
+
+The macro walkthrough above traces a JSON-API fetch. The Markets sources work a
+little differently — they download a ZIP, unzip it in memory, and parse a CSV with
+the stdlib. Let's follow one NSE day end-to-end.
+
+### 1. The source builds a URL and downloads a ZIP
+
+`NSEBhavcopySource.fetch(date(2026, 6, 2))` builds the archive URL
+`…/EQUITIES/2026/JUN/cm02JUN2026bhav.csv.zip` and GETs it with a module-level
+`httpx.Client`. A 404 means a non-trading day (weekend/holiday) — the source
+returns `[]` rather than raising, so the scheduler just logs "no file" and moves on.
+
+### 2. Unzip in memory, parse with stdlib `csv`
+
+```python
+with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
+    csv_bytes = zf.read(<the one .csv member>)
+reader = csv.DictReader(io.StringIO(csv_bytes.decode("latin-1")))
+```
+
+No temp files, no pandas — exactly the constraints in CLAUDE.md. Each row is
+filtered to `SERIES == "EQ"`, validated through the `BhavcopyRow` pydantic model
+(which coerces price/volume strings to floats and rejects blanks), and expanded
+into **five** `Record`s: `open_price`, `high_price`, `low_price`, `close_price`,
+`volume`.
+
+### 3. Insert (chunked) and query cross-sectionally
+
+`insert_batch` writes the ~10k records in 1000-row chunks. Now the movers endpoint
+can answer "top 10 gainers on 2026-06-02":
+
+```bash
+curl "http://localhost:8090/markets/movers?date=2026-06-02&exchange=NSE&n=10"
+```
+
+ClickHouse joins each symbol's close on that date to its previous close and returns
+the sorted `%change` — the API splits the sorted list into gainers (head) and
+losers (tail).
+
+### 4. The D3 heatmap renders
+
+`/markets/heatmap` returns `[{sector, change_pct, symbols}]`. `SectorHeatmap.tsx`
+is the repo's first D3 component: React owns the `<svg>` element via `useRef`, and a
+`useEffect` runs D3 imperatively to draw one coloured rectangle per sector
+(red→white→green diverging scale). React and D3 share exactly one boundary — the
+svg node — which keeps them from fighting over the DOM.
+
+### Try it yourself
+
+- **Backfill a week of equity data**:
+  `uv run python -m scripts.backfill --source nse_bhavcopy --from 2026-06-01 --to 2026-06-07`
+  (weekends will simply produce no file).
+- **Add a sector tag**: bhavcopy doesn't carry sectors. Extend `nse.py` to map ISIN
+  or symbol → sector (e.g. a small lookup dict) and set `region = "sector:IT"`. The
+  heatmap will immediately group by your new sectors.
+- **Change the dimension**: hit `/markets/equity?symbol=TCS&dimension=volume` and
+  watch the IndexChart-style series switch from price to traded shares.
+
+## More Python patterns explained (Phase 2)
+
+### In-memory ZIP handling — `io.BytesIO` + `zipfile`
+`zipfile.ZipFile` accepts any file-like object, so wrapping the downloaded
+`bytes` in `io.BytesIO` lets us read the archive without ever touching disk. The
+source stays stateless and there's nothing to clean up.
+
+### `model_validate({...})` vs keyword construction
+The sources build a dict and call `BhavcopyRow.model_validate(raw_dict)` rather
+than `BhavcopyRow(open=..., ...)`. Pydantic v2's `model_validate` accepts `Any`,
+which lets the `mode="before"` field validators coerce the raw CSV strings — and
+keeps `mypy --strict` happy (it would otherwise flag `str` passed to a `float`
+field at the call site).

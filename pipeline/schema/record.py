@@ -15,7 +15,7 @@ their data.
 """
 
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 
 @dataclass
@@ -59,7 +59,7 @@ class Record:
     unit: str
     region: str
     tags: dict[str, str]
-    fetched_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    fetched_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def as_dict(self) -> dict:
         """

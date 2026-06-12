@@ -18,12 +18,12 @@ Connection management:
     makes them easy to test with a test database.
 """
 
-import structlog
+from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import datetime, timezone
-from typing import Iterator
+from datetime import UTC, datetime
 
 import psycopg2
+import structlog
 from psycopg2 import pool as pg_pool
 from psycopg2.extras import RealDictCursor
 
@@ -84,18 +84,17 @@ def start_run(pool: pg_pool.SimpleConnectionPool, source: str, job_id: str) -> i
     Returns:
         The new pipeline_runs.id (integer primary key).
     """
-    with _get_conn(pool) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
+    with _get_conn(pool) as conn, conn.cursor() as cur:
+        cur.execute(
+            """
                 INSERT INTO pipeline_runs (source, job_id, started_at, status)
                 VALUES (%s, %s, %s, 'running')
                 RETURNING id
                 """,
-                (source, job_id, datetime.now(timezone.utc)),
-            )
-            row = cur.fetchone()
-            run_id: int = row[0]  # type: ignore[index]
+            (source, job_id, datetime.now(UTC)),
+        )
+        row = cur.fetchone()
+        run_id: int = row[0]  # type: ignore[index]
 
     log.info("pipeline_run.started", source=source, job_id=job_id, run_id=run_id)
     return run_id
@@ -122,10 +121,9 @@ def finish_run(
         status:        "success" or "failed"
         error_msg:     exception message on failure, None on success
     """
-    with _get_conn(pool) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
+    with _get_conn(pool) as conn, conn.cursor() as cur:
+        cur.execute(
+            """
                 UPDATE pipeline_runs
                 SET finished_at   = %s,
                     rows_fetched  = %s,
@@ -134,15 +132,15 @@ def finish_run(
                     error_msg     = %s
                 WHERE id = %s
                 """,
-                (
-                    datetime.now(timezone.utc),
-                    rows_fetched,
-                    rows_inserted,
-                    status,
-                    error_msg,
-                    run_id,
-                ),
-            )
+            (
+                datetime.now(UTC),
+                rows_fetched,
+                rows_inserted,
+                status,
+                error_msg,
+                run_id,
+            ),
+        )
 
     log.info(
         "pipeline_run.finished",
@@ -167,18 +165,17 @@ def get_latest_runs(pool: pg_pool.SimpleConnectionPool) -> list[dict]:
         source, job_id, started_at, finished_at, rows_fetched,
         rows_inserted, status, error_msg
     """
-    with _get_conn(pool) as conn:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(
-                """
+    with _get_conn(pool) as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
                 SELECT DISTINCT ON (source)
                     source, job_id, started_at, finished_at,
                     rows_fetched, rows_inserted, status, error_msg
                 FROM pipeline_runs
                 ORDER BY source, started_at DESC
                 """
-            )
-            return [dict(row) for row in cur.fetchall()]
+        )
+        return [dict(row) for row in cur.fetchall()]
 
 
 def get_run_history(
@@ -212,10 +209,9 @@ def get_run_history(
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
     params.append(limit)
 
-    with _get_conn(pool) as conn:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(
-                f"""
+    with _get_conn(pool) as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            f"""
                 SELECT source, job_id, started_at, finished_at,
                        rows_fetched, rows_inserted, status, error_msg
                 FROM pipeline_runs
@@ -223,6 +219,6 @@ def get_run_history(
                 ORDER BY started_at DESC
                 LIMIT %s
                 """,
-                params,
-            )
-            return [dict(row) for row in cur.fetchall()]
+            params,
+        )
+        return [dict(row) for row in cur.fetchall()]

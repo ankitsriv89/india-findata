@@ -28,11 +28,11 @@ Data freshness note:
 """
 
 import time
-import structlog
 from datetime import date, timedelta
 from typing import Any
 
 import httpx
+import structlog
 from pydantic import ValidationError
 
 from pipeline.schema.record import Record

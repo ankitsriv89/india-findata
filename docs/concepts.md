@@ -106,3 +106,46 @@ This gives you:
 - Error messages when something goes wrong
 
 The Pipeline tab in the dashboard reads directly from this table.
+
+## High-volume daily batches (Markets layer)
+
+Macro sources emit a handful of rows per run (CPI has ~4 series × 12 months). A
+single NSE bhavcopy is a different scale: ~2000 symbols × 5 dimensions (OHLC +
+volume) ≈ **10,000 records per day**. Two patterns keep this manageable:
+
+1. **Chunked inserts** — `insert_batch` splits records into 1000-row chunks, so a
+   day becomes ~10 `INSERT`s rather than one giant statement. This bounds memory
+   and stays under ClickHouse's `max_query_size`. (`test_nse.py` asserts the
+   chunk arithmetic: `2000×5 → 10 batches`.)
+2. **One dimension per record, not one wide row** — instead of a row with
+   open/high/low/close/volume columns, each becomes its own `Record` sharing the
+   universal schema. The dashboard then queries exactly the dimension it needs
+   (`WHERE dimension = 'close_price'`) and the `records` table never grows new
+   columns when we add a source.
+
+## Time-series vs cross-sectional queries
+
+The Markets API shows the two query shapes a financial dashboard needs:
+
+- **Time-series** (`/markets/equity`, `/markets/fii`) — *one* series over *many*
+  dates. These reuse the macro `_query_records` helper: filter `source`+`series`,
+  range over `date`, return `[{date, value}]`.
+- **Cross-sectional** (`/markets/movers`, `/markets/heatmap`) — *many* series on
+  *one* date, compared against each other. Top movers needs each symbol's % change
+  = `(today_close − prev_close)/prev_close`. We compute it in ClickHouse with a
+  self-join: a `today` CTE (close on the requested date) joined to a `prev` CTE
+  (`argMax(value, date)` over the prior 14 days, so a holiday gap doesn't drop the
+  symbol). The heatmap is the same join, then `avg()` grouped by the sector tag.
+
+Doing the comparison in SQL (not Python) means we move two numbers per symbol over
+the wire, not the whole price history.
+
+## Skip-not-crash on messy real-world files
+
+Bhavcopy and FII/DII files contain rows we can't use: suspended scrips with blank
+prices, settlement-series rows, the occasional malformed line. Every source
+validates each row through pydantic and **skips** bad ones with a logged warning —
+it never inserts `NaN` and never lets one bad row abort the whole day. A signed
+caveat: FII/DII *net flow* can legitimately be negative (net selling), so its
+validator rejects only missing/non-numeric values, never the sign. Compare with
+the price validator, which also rejects negatives (a price can't be below zero).

@@ -18,7 +18,7 @@ Why validate twice (pydantic + the Record dataclass)?
 from datetime import date
 from typing import Any
 
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class MOSPISeriesPoint(BaseModel):
@@ -106,3 +106,99 @@ class DataGovInRecord(BaseModel):
         """Convenience accessor that normalises key lookup to lowercase."""
         # API field names are inconsistent across datasets — try both cases
         return self.fields.get(key) or self.fields.get(key.lower()) or default
+
+
+class BhavcopyRow(BaseModel):
+    """
+    One validated equity row from an NSE or BSE daily bhavcopy CSV.
+
+    Shared by both exchange sources (they map their differently-named columns
+    onto these canonical fields before constructing the model).  The validators
+    enforce the pipeline's "skip-bad-rows, never insert NaN" rule:
+
+      - Prices and volume must be present and numeric; blank/"-"/non-numeric
+        raises ValueError so the source skips the row with a warning.
+      - Negative prices are rejected (a price can't be negative); a price of
+        exactly 0 is allowed (some illiquid scrips legitimately print 0 for a
+        day with no trades, which the volume==0 case captures).
+
+    Example (NSE columns mapped):
+        BhavcopyRow(symbol="TCS", series="EQ", open="3850.0", high="3899.9",
+                    low="3840.1", close="3888.5", volume="1234567",
+                    isin="INE467B01029")
+    """
+
+    symbol: str
+    series: str
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float
+    isin: str = ""
+
+    @field_validator("open", "high", "low", "close", mode="before")
+    @classmethod
+    def coerce_price(cls, v: Any) -> float:
+        """Reject missing/non-numeric prices and negatives (skip-not-crash)."""
+        if v is None or v == "" or v == "-" or v == "NA":
+            raise ValueError(f"missing price: {v!r}")
+        price = float(v)
+        if price < 0:
+            raise ValueError(f"negative price: {price}")
+        return price
+
+    @field_validator("volume", mode="before")
+    @classmethod
+    def coerce_volume(cls, v: Any) -> float:
+        """Volume must be a non-negative number; blank/non-numeric is skipped."""
+        if v is None or v == "" or v == "-" or v == "NA":
+            raise ValueError(f"missing volume: {v!r}")
+        vol = float(v)
+        if vol < 0:
+            raise ValueError(f"negative volume: {vol}")
+        return vol
+
+    @field_validator("symbol", mode="before")
+    @classmethod
+    def require_symbol(cls, v: Any) -> str:
+        """A row with no symbol is unusable — reject it."""
+        s = str(v).strip()
+        if not s:
+            raise ValueError("empty symbol")
+        return s
+
+
+class FIIDIIRow(BaseModel):
+    """
+    One validated FII/DII net-flow row from the NSE daily report.
+
+    Unlike prices, the NET value may legitimately be NEGATIVE (net selling),
+    so the validator only rejects missing/non-numeric values — never the sign.
+
+    Example:
+        FIIDIIRow(date="02-Jun-2026", net_value="-1234.56")
+    """
+
+    date_str: str = Field(alias="date")
+    net_value: float
+
+    model_config = {"populate_by_name": True}
+
+    @field_validator("net_value", mode="before")
+    @classmethod
+    def coerce_net(cls, v: Any) -> float:
+        """Net flow: reject only missing/non-numeric (negatives are valid)."""
+        if v is None or v == "" or v == "-" or v == "NA":
+            raise ValueError(f"missing net value: {v!r}")
+        # NSE writes large numbers with thousands commas, e.g. "12,345.67".
+        if isinstance(v, str):
+            v = v.replace(",", "")
+        return float(v)
+
+    def observation_date(self) -> date:
+        """Parse the report's date string into a Python date."""
+        # Import here to avoid a circular import (sebi imports this module).
+        from pipeline.sources.sebi import _parse_flow_date
+
+        return _parse_flow_date(self.date_str)

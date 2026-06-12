@@ -12,7 +12,13 @@
  */
 
 import { useQuery } from '@tanstack/react-query'
-import { apiClient, TimeSeriesResponse, PipelineRun } from './client'
+import {
+  apiClient,
+  TimeSeriesResponse,
+  PipelineRun,
+  MoversResponse,
+  HeatmapResponse,
+} from './client'
 
 // ── Date range helpers ────────────────────────────────────────────────────────
 
@@ -84,6 +90,78 @@ export function useRates(from: string, to: string, series = 'REPO_RATE') {
       return data
     },
     staleTime: 5 * 60 * 1000,
+  })
+}
+
+// ── Markets hooks (Phase 2) ─────────────────────────────────────────────────────
+
+/**
+ * Daily price (or volume) series for one equity symbol.
+ * Used for the index line chart (NIFTY50 close) and any per-symbol chart.
+ */
+export function useEquity(
+  symbol: string,
+  from: string,
+  to: string,
+  exchange = 'NSE',
+  dimension = 'close_price',
+) {
+  return useQuery<TimeSeriesResponse>({
+    queryKey: ['markets', 'equity', exchange, symbol, dimension, from, to],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/markets/equity', {
+        params: { symbol, exchange, dimension, from, to },
+      })
+      return data
+    },
+    // Equity EOD updates once/day — 5 min stale is fine.
+    staleTime: 5 * 60 * 1000,
+    // Don't fire until a symbol is chosen.
+    enabled: symbol.length > 0,
+  })
+}
+
+/** Daily FII/DII net equity flow series (crore INR; negative = net selling). */
+export function useFIIDII(from: string, to: string, series = 'FII_NET_EQUITY') {
+  return useQuery<TimeSeriesResponse>({
+    queryKey: ['markets', 'fii', series, from, to],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/markets/fii', {
+        params: { series, from, to },
+      })
+      return data
+    },
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+/** Top gainers/losers for an exchange on a given date. */
+export function useMovers(date: string, exchange = 'NSE', n = 10) {
+  return useQuery<MoversResponse>({
+    queryKey: ['markets', 'movers', exchange, date, n],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/markets/movers', {
+        params: { date, exchange, n },
+      })
+      return data
+    },
+    staleTime: 5 * 60 * 1000,
+    enabled: date.length > 0,
+  })
+}
+
+/** Sector heatmap (average %change per sector) for an exchange on a given date. */
+export function useHeatmap(date: string, exchange = 'NSE') {
+  return useQuery<HeatmapResponse>({
+    queryKey: ['markets', 'heatmap', exchange, date],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/markets/heatmap', {
+        params: { date, exchange },
+      })
+      return data
+    },
+    staleTime: 5 * 60 * 1000,
+    enabled: date.length > 0,
   })
 }
 

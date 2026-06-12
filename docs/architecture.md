@@ -7,11 +7,13 @@ flowchart TD
     subgraph Sources["External Data Sources"]
         MOSPI["MOSPI API\napi.mospi.gov.in\nCPI · IIP · GDP"]
         DATAGOV["data.gov.in API\nRBI rates · forex"]
+        NSEBSE["NSE / BSE archives\nbhavcopy ZIP CSV\nOHLC · volume"]
+        FIIDII["NSE FII/DII report\nnet equity flows"]
     end
 
     subgraph Pipeline["Pipeline Process (single container)"]
         SCHED["APScheduler\nBackground threads"]
-        SRC["Sources\nmospi.py\ndata_gov_in.py"]
+        SRC["Sources\nmospi.py · data_gov_in.py\nnse.py · bse.py · sebi.py"]
         STORE["Store\nclickhouse.py\npostgres.py"]
         API["FastAPI\n:8090"]
     end
@@ -23,7 +25,7 @@ flowchart TD
 
     subgraph Frontend["Frontend"]
         NGINX["nginx\n:5190"]
-        REACT["React SPA\nMacro · Pipeline tabs"]
+        REACT["React SPA\nMacro · Markets · Pipeline tabs"]
     end
 
     subgraph Observability["Observability"]
@@ -33,13 +35,15 @@ flowchart TD
 
     MOSPI -->|HTTP JSON| SRC
     DATAGOV -->|HTTP JSON| SRC
+    NSEBSE -->|HTTP ZIP→CSV| SRC
+    FIIDII -->|HTTP CSV| SRC
     SCHED -->|fires jobs| SRC
     SRC -->|list[Record]| STORE
     STORE -->|INSERT JSONEachRow| CH
     STORE -->|INSERT/UPDATE| PG
     API -->|SELECT FINAL| CH
     API -->|SELECT| PG
-    REACT -->|GET /macro/*| NGINX
+    REACT -->|GET /macro/* · /markets/*| NGINX
     NGINX -->|proxy_pass| API
     API -->|Prometheus metrics| PROM
     PROM --> GRAF

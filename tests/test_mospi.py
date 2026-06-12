@@ -13,12 +13,13 @@ Why test parse() separately from fetch()?
 """
 
 import json
-import pytest
 from datetime import date
 from pathlib import Path
 
-from pipeline.sources.mospi import MOSPISource, _parse_quarter_date
+import pytest
+
 from pipeline.schema.record import Record
+from pipeline.sources.mospi import MOSPISource, _parse_quarter_date
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

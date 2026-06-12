@@ -11,10 +11,10 @@ We use asyncpg (async) here so these queries don't block the event loop.
 The scheduler uses psycopg2 (sync, in a thread pool) — two separate pools.
 """
 
-import structlog
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, Request, Query
+import structlog
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 
 log = structlog.get_logger()
@@ -58,7 +58,7 @@ async def get_pipeline_status(request: Request) -> list[PipelineRunSummary]:
         )
     except Exception as exc:
         log.error("pipeline.status_query_failed", error=str(exc))
-        raise HTTPException(status_code=503, detail=f"Pipeline status query failed: {exc}")
+        raise HTTPException(status_code=503, detail=f"Pipeline status query failed: {exc}") from exc
 
     return [PipelineRunSummary(**dict(row)) for row in rows]
 
@@ -108,6 +108,6 @@ async def get_pipeline_runs(
         )
     except Exception as exc:
         log.error("pipeline.runs_query_failed", error=str(exc))
-        raise HTTPException(status_code=503, detail=f"Pipeline runs query failed: {exc}")
+        raise HTTPException(status_code=503, detail=f"Pipeline runs query failed: {exc}") from exc
 
     return [PipelineRunSummary(**dict(row)) for row in rows]
