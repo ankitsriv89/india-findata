@@ -23,6 +23,7 @@ dependencies = [
 
     # Data extraction
     "openpyxl>=3.1.2",              # Excel (.xlsx) parsing for RBI DBIE
+    "pdfplumber>=0.11.0",           # PDF table extraction for RBI quarterly NPA report
     "beautifulsoup4>=4.12.3",       # HTML table parsing
     "lxml>=5.2.1",                  # fast HTML/XML parser (bs4 backend)
 
@@ -41,6 +42,7 @@ dev = [
     "ruff>=0.4.7",
     "mypy>=1.10.0",
     "httpx[mock]>=0.27.0",
+    "reportlab>=4.2.0",   # generate the RBI NPA fixture PDF (test fixtures only)
 ]
 
 [build-system]

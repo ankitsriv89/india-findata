@@ -9,11 +9,12 @@ flowchart TD
         DATAGOV["data.gov.in API\nRBI rates · forex"]
         NSEBSE["NSE / BSE archives\nbhavcopy ZIP CSV\nOHLC · volume"]
         FIIDII["NSE FII/DII report\nnet equity flows"]
+        RBIDBIE["RBI DBIE\ndata.rbi.org.in\nforex · M3 · credit · NPA\nExcel + PDF"]
     end
 
     subgraph Pipeline["Pipeline Process (single container)"]
         SCHED["APScheduler\nBackground threads"]
-        SRC["Sources\nmospi.py · data_gov_in.py\nnse.py · bse.py · sebi.py"]
+        SRC["Sources\nmospi · data_gov_in · nse\nbse · sebi · rbi"]
         STORE["Store\nclickhouse.py\npostgres.py"]
         API["FastAPI\n:8090"]
     end
@@ -25,7 +26,7 @@ flowchart TD
 
     subgraph Frontend["Frontend"]
         NGINX["nginx\n:5190"]
-        REACT["React SPA\nMacro · Markets · Pipeline tabs"]
+        REACT["React SPA\nMacro · Markets · Banking\nCorrelation · Pipeline"]
     end
 
     subgraph Observability["Observability"]
@@ -37,13 +38,14 @@ flowchart TD
     DATAGOV -->|HTTP JSON| SRC
     NSEBSE -->|HTTP ZIP→CSV| SRC
     FIIDII -->|HTTP CSV| SRC
+    RBIDBIE -->|HTTP Excel/PDF| SRC
     SCHED -->|fires jobs| SRC
     SRC -->|list[Record]| STORE
     STORE -->|INSERT JSONEachRow| CH
     STORE -->|INSERT/UPDATE| PG
     API -->|SELECT FINAL| CH
     API -->|SELECT| PG
-    REACT -->|GET /macro/* · /markets/*| NGINX
+    REACT -->|GET /macro/* · /markets/* · /banking/*| NGINX
     NGINX -->|proxy_pass| API
     API -->|Prometheus metrics| PROM
     PROM --> GRAF

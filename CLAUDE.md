@@ -99,7 +99,7 @@ pipeline/main.py             — starts scheduler + FastAPI app
 - React + Vite + TypeScript — no class components, hooks only
 - Charting: **Recharts** for line/bar/area, **D3.js** for custom heatmaps
 - No `innerHTML` with API data — always `textContent` or React's JSX rendering
-- Tabs: Macro | Markets | Correlation | Pipeline
+- Tabs: Macro | Markets | Banking | Correlation | Pipeline
 - API base URL from `VITE_API_URL` env var (default `http://localhost:8090`)
 - No mock data in components — all data from real API calls
 

@@ -255,3 +255,71 @@ than `BhavcopyRow(open=..., ...)`. Pydantic v2's `model_validate` accepts `Any`,
 which lets the `mode="before"` field validators coerce the raw CSV strings — and
 keeps `mypy --strict` happy (it would otherwise flag `str` passed to a `float`
 field at the call site).
+
+---
+
+## Phase 3: Parse a PDF table (Banking layer)
+
+The RBI gross-NPA ratio only exists as a PDF. Here's how `RBIDBIESource.parse_npa`
+turns it into Records — the repo's first PDF-parsing path.
+
+### 1. Open the PDF and pull every table
+
+```python
+with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+    tables = []
+    for page in pdf.pages:
+        tables.extend(page.extract_tables() or [])
+```
+
+`extract_tables()` returns each table as a list of rows, each row a list of cell
+strings. It works best when the PDF has real ruled lines — which is why the test
+fixture is generated with reportlab's `GRID` table style.
+
+### 2. Keep rows that look like (quarter, ratio)
+
+For each row we read `row[0]` (quarter label) and `row[1]` (ratio). The label goes
+through the **same** fiscal-quarter parser the GDP source uses
+(`Q1 2025-26 → 2025-04-01`); if it isn't a quarter (a header, a "All Banks" total),
+the parser returns `None` and we skip the row. The ratio goes through
+`RBIDataPoint`, which rejects "n/a"/blank. Survivors become quarterly Records with
+`series="GROSS_NPA_RATIO"`, `unit="percent"`.
+
+### 3. Query it like anything else
+
+```bash
+curl "http://localhost:8090/banking/npa?from=2024-01-01&to=2026-06-01"
+```
+
+Same `TimeSeriesResponse` envelope as every other endpoint — the universal Record
+schema means a PDF-sourced series and a JSON-API series are indistinguishable
+downstream. `NPAChart.tsx` renders it as colour-graded quarterly bars.
+
+### Excel is the same idea
+
+`parse_excel` opens the workbook with `openpyxl.load_workbook(..., read_only=True,
+data_only=True)`, locates the date/value columns by header keywords, and applies the
+same validate-and-skip loop. Forex, M3, and bank-credit all flow through it with
+different `(series, unit, granularity)` metadata.
+
+### Try it yourself
+
+- **Break the layout on purpose**: rename a column header in
+  `tests/fixtures/rbi_wss_sample.xlsx` (regenerate it) and watch `parse_excel`
+  return `[]` with an `excel_unknown_layout` warning instead of crashing.
+- **Add a DBIE series**: pick another DBIE workbook (e.g. CRR/SLR), add an entry to
+  `_EXCEL_META` in `rbi.py` and a `/banking/...` endpoint — no schema changes
+  needed.
+
+## More Python patterns explained (Phase 3)
+
+### `openpyxl` read-only + `data_only`
+`read_only=True` streams the worksheet (bounded memory for large workbooks);
+`data_only=True` returns cached cell *values* rather than formula strings. Together
+they give clean `(date, number)` tuples without evaluating formulas.
+
+### Keyword-based column location
+`_locate_columns` does a tiny "schema inference": it treats any header containing
+"date"/"week"/"month" as the date column and "value"/"reserves"/"credit"/… as the
+value column. It's deliberately fuzzy because DBIE's exact wording drifts — better
+to match loosely and validate the cells than to hard-code a brittle column index.

@@ -202,3 +202,34 @@ class FIIDIIRow(BaseModel):
         from pipeline.sources.sebi import _parse_flow_date
 
         return _parse_flow_date(self.date_str)
+
+
+class RBIDataPoint(BaseModel):
+    """
+    One validated observation from an RBI DBIE publication (Excel or PDF).
+
+    DBIE publications have no stable schema — column names and layout drift
+    between releases — so the source modules do the messy extraction and hand
+    this model a clean (date, value) pair plus the already-resolved series.
+    This model's only job is the universal numeric guard: reject missing /
+    non-numeric values so we never insert NaN, while ALLOWING values that some
+    series can legitimately have at zero or (for growth/NPA deltas) negative.
+
+    Example:
+        RBIDataPoint(observation=date(2026, 5, 30), value="652.34",
+                     series="FOREX_RESERVES")
+    """
+
+    observation: date
+    value: float
+    series: str
+
+    @field_validator("value", mode="before")
+    @classmethod
+    def coerce_value(cls, v: Any) -> float:
+        """Reject missing/non-numeric; strip thousands commas; keep the sign."""
+        if v is None or v == "" or v == "-" or v == "NA":
+            raise ValueError(f"missing RBI value: {v!r}")
+        if isinstance(v, str):
+            v = v.replace(",", "").strip()
+        return float(v)

@@ -164,3 +164,72 @@ logs and returns nothing rather than crashing the scheduler. Fully fixture-teste
 
 **Example**: On a risk-off day FII might be −1,234 cr (net sell) while DII is +1,035 cr
 (net buy), a classic counter-flow pattern.
+
+---
+
+# Phase 3 — Banking & Credit (RBI DBIE)
+
+All four series share `source = "rbi_dbie"`. The RBI DBIE portal has no clean API;
+data comes as Excel workbooks (parsed with openpyxl) and one quarterly PDF (parsed
+with pdfplumber). Parsing is **defensive** — unknown columns / malformed rows are
+skipped with a warning, never crash the job.
+
+## RBI Forex Reserves (DBIE) — `FOREX_RESERVES`
+
+| Field | Value |
+|-------|-------|
+| Source name | `rbi_dbie` |
+| Series | `FOREX_RESERVES` |
+| Dimension | `value` |
+| Granularity | `weekly` |
+| Unit | `USD_billion` |
+| API | RBI DBIE Weekly Statistical Supplement (Excel) |
+| Release schedule | Weekly, Friday |
+| Tags | `publisher: "rbi"`, `via: "dbie"` |
+
+(Distinct from the Phase 1 `rbi_forex` data.gov.in source — different `source` value,
+richer DBIE origin.)
+
+## RBI M3 Broad Money — `M3_MONEY_SUPPLY`
+
+| Field | Value |
+|-------|-------|
+| Source name | `rbi_dbie` |
+| Series | `M3_MONEY_SUPPLY` |
+| Dimension | `value` |
+| Granularity | `monthly` |
+| Unit | `crore_INR` |
+| API | RBI DBIE money-supply workbook (Excel) |
+| Release schedule | Monthly |
+
+**Example**: M3 ≈ ₹245 lakh crore in early 2026 (dashboard shows it in lakh crore).
+
+## Bank Credit Growth — `BANK_CREDIT_GROWTH`
+
+| Field | Value |
+|-------|-------|
+| Source name | `rbi_dbie` |
+| Series | `BANK_CREDIT_GROWTH` |
+| Dimension | `value` |
+| Granularity | `monthly` |
+| Unit | `percent` (YoY) |
+| API | RBI DBIE bank-credit workbook (Excel) |
+
+The dashboard overlays this against GDP growth (reuses the Phase 1 `useGDP` hook).
+
+## Gross NPA Ratio — `GROSS_NPA_RATIO`
+
+| Field | Value |
+|-------|-------|
+| Source name | `rbi_dbie` |
+| Series | `GROSS_NPA_RATIO` |
+| Dimension | `value` |
+| Granularity | `quarterly` |
+| Unit | `percent` |
+| API | RBI quarterly report (**PDF**, parsed with pdfplumber) |
+| Release schedule | Quarterly |
+| Tags | `publisher: "rbi"`, `via: "dbie"`, `report: "npa"` |
+
+**Quirks**: extracted from PDF tables via `pdfplumber.extract_tables()`; rows that
+aren't a `(quarter_label, numeric_ratio)` pair (headers, totals, "n/a") are skipped.
+Quarter labels use Indian-fiscal convention (`Q1 2025-26` → 2025-04-01).

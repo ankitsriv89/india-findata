@@ -28,14 +28,17 @@ from pipeline.sources.bse import BSEBhavcopySource
 from pipeline.sources.data_gov_in import RBIForexSource, RBIRatesSource
 from pipeline.sources.mospi import MOSPIGDPSource, MOSPISource
 from pipeline.sources.nse import NSEBhavcopySource
+from pipeline.sources.rbi import RBIDBIESource
 from pipeline.sources.sebi import FIIDIISource
 
 log = structlog.get_logger()
 
-# All sources the backfill script knows about (Phase 1 macro + Phase 2 markets)
+# All sources the backfill script knows about (Phase 1 macro + Phase 2 markets
+# + Phase 3 banking)
 _SOURCE_NAMES = [
     "mospi_cpi", "mospi_gdp", "rbi_rates", "rbi_forex",
     "nse_bhavcopy", "bse_bhavcopy", "fii_dii",
+    "rbi_dbie",
 ]
 
 
@@ -53,6 +56,8 @@ def _build_sources(settings) -> dict:
         "nse_bhavcopy": NSEBhavcopySource(),
         "bse_bhavcopy": BSEBhavcopySource(),
         "fii_dii": FIIDIISource(),
+        # Phase 3 banking — RBI DBIE Excel + PDF, no credentials
+        "rbi_dbie": RBIDBIESource(),
     }
 
 

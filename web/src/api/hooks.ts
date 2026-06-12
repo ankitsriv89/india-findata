@@ -165,6 +165,56 @@ export function useHeatmap(date: string, exchange = 'NSE') {
   })
 }
 
+// ── Banking hooks (Phase 3) ──────────────────────────────────────────────────
+
+/** Forex reserves — weekly, USD billion. */
+export function useForex(from: string, to: string) {
+  return useQuery<TimeSeriesResponse>({
+    queryKey: ['banking', 'forex', from, to],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/banking/forex', { params: { from, to } })
+      return data
+    },
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+/** M3 broad money supply — monthly, crore INR. */
+export function useM3(from: string, to: string) {
+  return useQuery<TimeSeriesResponse>({
+    queryKey: ['banking', 'm3', from, to],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/banking/m3', { params: { from, to } })
+      return data
+    },
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+/** Bank credit growth — monthly, percent (YoY). */
+export function useCredit(from: string, to: string) {
+  return useQuery<TimeSeriesResponse>({
+    queryKey: ['banking', 'credit', from, to],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/banking/credit', { params: { from, to } })
+      return data
+    },
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+/** Gross NPA ratio — quarterly, percent. */
+export function useNPA(from: string, to: string) {
+  return useQuery<TimeSeriesResponse>({
+    queryKey: ['banking', 'npa', from, to],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/banking/npa', { params: { from, to } })
+      return data
+    },
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
 // ── Pipeline hooks ────────────────────────────────────────────────────────────
 
 export function usePipelineStatus() {

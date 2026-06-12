@@ -114,3 +114,26 @@ tests/test_sebi.py .....        [ category mapping, negative net kept,
 
 Frontend build (`cd web && npm install && npm run build`): `tsc && vite build`
 clean — 1306 modules, ~682 kB JS (198 kB gzip).
+
+## Phase 3 (0.3.0) — Banking & Credit
+
+New deps:
+- `pdfplumber` (runtime) — extracts the gross-NPA table from the RBI quarterly PDF
+- `reportlab` (dev only) — generates the NPA fixture PDF (`tests/fixtures/rbi_npa_sample.pdf`)
+
+Excel parsing uses the already-present `openpyxl`. No pandas (CLAUDE.md).
+
+Regenerate the binary fixtures (Excel + PDF) if needed:
+```bash
+# Excel fixtures (forex/M3/unknown-layout) — see the generator in the Phase 3 commit
+# PDF fixture — built with reportlab's Table + GRID style so pdfplumber.extract_tables() reads it
+```
+
+Phase 3 test output (8 new tests; 46 total):
+```
+tests/test_rbi.py ........   [ forex valid rows + fields, M3 skip-non-numeric +
+                               month normalisation, unknown layout → [],
+                               garbage bytes → [], NPA PDF quarters + fields,
+                               garbage PDF → [] ]
+46 passed
+```

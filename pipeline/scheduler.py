@@ -37,6 +37,7 @@ from pipeline.sources.bse import BSEBhavcopySource
 from pipeline.sources.data_gov_in import RBIForexSource, RBIRatesSource
 from pipeline.sources.mospi import MOSPIGDPSource, MOSPISource
 from pipeline.sources.nse import NSEBhavcopySource
+from pipeline.sources.rbi import RBIDBIESource
 from pipeline.sources.sebi import FIIDIISource
 
 log = structlog.get_logger()
@@ -138,6 +139,9 @@ def create_scheduler(ch_client, pg_pool) -> BackgroundScheduler:
     bse_src = BSEBhavcopySource()
     fii_dii_src = FIIDIISource()
 
+    # Phase 3 — Banking & Credit (RBI DBIE Excel + PDF; no credentials)
+    rbi_dbie_src = RBIDBIESource()
+
     # Helper to DRY up job registration
     def add(source_obj, job_id: str, trigger: CronTrigger) -> None:
         scheduler.add_job(
@@ -201,6 +205,17 @@ def create_scheduler(ch_client, pg_pool) -> BackgroundScheduler:
         fii_dii_src,
         "fii_dii",
         CronTrigger(day_of_week="mon-fri", hour=19, minute=30, timezone=settings.tz),
+    )
+
+    # ── Phase 3: Banking & Credit (RBI DBIE) — weekly Friday 18:00 IST ─────────
+    # One job pulls all DBIE datasets (forex weekly, M3/credit monthly, NPA
+    # quarterly).  Re-pulling the full workbooks weekly is cheap and idempotent —
+    # ReplacingMergeTree dedups, and weekly cadence catches the new forex point
+    # while M3/credit/NPA simply re-confirm until their next release.
+    add(
+        rbi_dbie_src,
+        "rbi_dbie",
+        CronTrigger(day_of_week="fri", hour=18, minute=0, timezone=settings.tz),
     )
 
     return scheduler

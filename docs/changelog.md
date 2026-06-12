@@ -4,6 +4,49 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ---
 
+## [0.3.0] — 2026-06-12
+
+### Added
+
+**Banking & Credit source (Phase 3)**
+- `pipeline/sources/rbi.py` — `RBIDBIESource`: RBI DBIE indicators in one source.
+  Excel via openpyxl (forex weekly, M3 + bank-credit monthly), PDF via pdfplumber
+  (gross NPA quarterly). Defensive parsing — unknown columns / malformed rows are
+  skipped with a warning, never crash the job.
+- `pipeline/schema/validators.py` — `RBIDataPoint` (numeric guard; keeps sign for
+  growth/credit values)
+- `pdfplumber` runtime dep; `reportlab` dev dep (generates the NPA fixture PDF)
+
+**API routes**
+- `GET /banking/forex` · `GET /banking/m3` · `GET /banking/credit` · `GET /banking/npa`
+  — all `TimeSeriesResponse` via the shared `_query_records` helper
+
+**Frontend — new 5th tab (Macro | Markets | Banking | Correlation | Pipeline)**
+- `web/src/components/BankingPanel.tsx` (Banking tab live)
+- `charts/ForexReservesChart.tsx` (weekly area), `charts/M3Chart.tsx` (line),
+  `charts/CreditGrowthChart.tsx` (credit vs GDP overlay — reuses `useGDP`),
+  `charts/NPAChart.tsx` (quarterly bars, colour-graded by stress)
+- `api/hooks.ts` — `useForex`, `useM3`, `useCredit`, `useNPA`
+- `App.tsx` Tab union/TABS + `CLAUDE.md` tab list updated to five tabs
+
+**Tests / fixtures**
+- `tests/test_rbi.py` (8 tests): Excel parse, missing/non-numeric skip, month
+  normalisation, unknown-layout → [], garbage bytes → [], NPA PDF extraction +
+  non-quarter/non-numeric skip
+- `tests/fixtures/`: `rbi_wss_sample.xlsx`, `rbi_m3_sample.xlsx`,
+  `rbi_unknown_layout.xlsx`, `rbi_npa_sample.pdf`
+
+**Wiring**
+- `scripts/backfill.py` + `pipeline/scheduler.py` — `rbi_dbie` registered (weekly
+  Friday 18:00 IST; one job pulls all DBIE datasets, idempotent re-pull)
+
+### Notes
+- 46 pytest pass, ruff clean, new Phase 3 code mypy-clean, web build green.
+- Live DBIE URLs may be IP-blocked from the cloud box like MOSPI — irrelevant to
+  this build (fully fixture-tested); revisited in the data-source step.
+
+---
+
 ## [0.2.0] — 2026-06-12
 
 ### Added

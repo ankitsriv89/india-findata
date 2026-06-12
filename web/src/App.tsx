@@ -11,14 +11,16 @@ import { useState, useEffect } from 'react'
 import Layout from './components/Layout'
 import MacroPanel from './components/MacroPanel'
 import MarketsPanel from './components/MarketsPanel'
+import BankingPanel from './components/BankingPanel'
 import PipelinePanel from './components/PipelinePanel'
 import './styles/app.css'
 
-type Tab = 'macro' | 'markets' | 'correlation' | 'pipeline'
+type Tab = 'macro' | 'markets' | 'banking' | 'correlation' | 'pipeline'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'macro',       label: 'Macro' },
   { id: 'markets',     label: 'Markets' },
+  { id: 'banking',     label: 'Banking' },
   { id: 'correlation', label: 'Correlation' },
   { id: 'pipeline',    label: 'Pipeline' },
 ]
@@ -47,6 +49,7 @@ export default function App() {
     <Layout tabs={TABS} activeTab={activeTab} onTabChange={(id) => setActiveTab(id as Tab)}>
       {activeTab === 'macro'       && <MacroPanel />}
       {activeTab === 'markets'     && <MarketsPanel />}
+      {activeTab === 'banking'     && <BankingPanel />}
       {activeTab === 'correlation' && <ComingSoon label="Correlation" note="Phase 4 — cross-domain correlation explorer" />}
       {activeTab === 'pipeline'    && <PipelinePanel />}
     </Layout>

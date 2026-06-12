@@ -149,3 +149,39 @@ it never inserts `NaN` and never lets one bad row abort the whole day. A signed
 caveat: FII/DII *net flow* can legitimately be negative (net selling), so its
 validator rejects only missing/non-numeric values, never the sign. Compare with
 the price validator, which also rejects negatives (a price can't be below zero).
+
+## Parsing irregular, layout-drifting sources
+
+Phase 1/2 sources have stable shapes (a JSON API, a fixed CSV header). The RBI
+DBIE sources are the opposite: there is **no contract**. Excel workbooks rename
+columns and reshuffle rows between releases; the NPA PDF's table layout shifts.
+Three habits make this survivable:
+
+1. **Locate, don't assume.** Instead of hard-coding "the date is column A," the
+   Excel parser scans the first ~10 rows for a header cell that *looks like* a
+   date column and one that looks like a value column (keyword substring match).
+   If it can't find both, it logs `excel_unknown_layout` and returns `[]` — the
+   job succeeds with zero rows rather than crashing on a renamed header.
+2. **Validate every cell, skip the bad ones.** Each candidate row goes through
+   `RBIDataPoint` (numeric guard). Footnotes, totals, "n/a", and blank rows fail
+   validation and are skipped with a warning. One malformed row never aborts the
+   release.
+3. **Trust the data's own dates.** DBIE rows carry their observation date; we
+   parse it flexibly (real Excel dates, `YYYY-MM-DD`, `Mar-2026`, `March 2026`)
+   and fall back to skipping a row whose date we can't read.
+
+This is the same skip-not-crash discipline as the CSV sources, pushed harder
+because the input is less trustworthy. The unit tests prove it: a fixture with a
+renamed-column sheet returns `[]`, and a PDF with an "n/a" ratio and a non-quarter
+"All Banks" row yields exactly the three valid quarters.
+
+## Revisions and idempotent re-pull
+
+DBIE workbooks contain the full history every time you download them, and RBI
+revises recent figures. We don't try to fetch "just the new rows" — the weekly job
+re-pulls the whole workbook and re-inserts everything. ClickHouse's
+ReplacingMergeTree deduplicates on `(source, series, dimension, date)` keeping the
+latest `fetched_at`, so a revised value transparently replaces the old one and a
+re-pull of unchanged data is a no-op. This is the [idempotency](#idempotency) and
+[data-revision](#data-revisions-scd-type-2) machinery from Phase 1, now doing real
+work on a genuinely-revising source.
