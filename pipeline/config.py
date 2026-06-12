@@ -47,6 +47,11 @@ class Settings(BaseSettings):
     mospi_api_token: str = ""
     data_gov_in_api_key: str = ""
 
+    # MOSPI MCP server — live CPI/WPI/IIP/GDP via JSON-RPC, no auth.
+    # This host is DIFFERENT from the IP-filtered api.mospi.gov.in and is
+    # reachable from the cloud box (verified 2026-06).  No key needed.
+    mospi_mcp_url: str = "https://mcp.mospi.gov.in/"
+
     log_level: str = "INFO"
     tz: str = "Asia/Kolkata"
     api_port: int = 8090

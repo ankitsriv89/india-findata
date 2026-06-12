@@ -153,3 +153,24 @@ tests/test_analytics.py .........   [ perfect ± correlation, zero-variance/too-
 
 Frontend build (`cd web && npm run build`): clean — 1317 modules, ~693 kB JS
 (201 kB gzip). All five tabs render real panels.
+
+## 0.5.0 — Macro via MOSPI MCP
+
+No new dependencies (the MCP client is plain `httpx` + stdlib `json`; SSE parsing
+is a few lines). New config: `mospi_mcp_url`.
+
+Tests use captured real server responses (`tests/fixtures/mcp_*_response.txt`).
+Recapture them with the curl pattern in memory `findata-mospi-mcp-contract`, e.g.:
+```
+curl -sS -X POST https://mcp.mospi.gov.in/ \
+  -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_data","arguments":{"dataset":"CPI","filters":{"base_year":"2012","series":"Current","state_code":99,"year":2024,"month_code":12,"limit":80}}}}'
+```
+
+Test output (11 new; 66 total):
+```
+tests/test_mospi_mcp.py ...........   [ SSE decode + jsonrpc-error, CPI/WPI/IIP/GDP
+                                        field mapping, index+inflation/growth,
+                                        skip null/NA, unknown-month skip ]
+66 passed
+```

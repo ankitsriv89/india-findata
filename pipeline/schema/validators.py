@@ -233,3 +233,30 @@ class RBIDataPoint(BaseModel):
         if isinstance(v, str):
             v = v.replace(",", "").strip()
         return float(v)
+
+
+class MCPDataPoint(BaseModel):
+    """
+    One numeric value from a MOSPI MCP data row.
+
+    The MCP `get_data` rows are clean dicts, but values arrive as strings
+    ("204.7", "8.65") and some cells are null/blank.  This model is the single
+    numeric guard the mospi_mcp source uses for every value it extracts: it
+    rejects missing/non-numeric (so we skip the row, never insert NaN) and keeps
+    the sign (inflation/growth can be negative).
+
+    Example:
+        MCPDataPoint(value="204.7")  → value == 204.7
+    """
+
+    value: float
+
+    @field_validator("value", mode="before")
+    @classmethod
+    def coerce_value(cls, v: Any) -> float:
+        """Reject None/blank/'NA'; strip commas; allow negatives."""
+        if v is None or v == "" or v == "-" or str(v).strip().upper() == "NA":
+            raise ValueError(f"missing MCP value: {v!r}")
+        if isinstance(v, str):
+            v = v.replace(",", "").strip()
+        return float(v)

@@ -35,7 +35,12 @@ import pipeline.store.postgres as pg_store
 from pipeline.config import settings
 from pipeline.sources.bse import BSEBhavcopySource
 from pipeline.sources.data_gov_in import RBIForexSource, RBIRatesSource
-from pipeline.sources.mospi import MOSPIGDPSource, MOSPISource
+from pipeline.sources.mospi_mcp import (
+    MOSPIMCPCPISource,
+    MOSPIMCPGDPSource,
+    MOSPIMCPIIPSource,
+    MOSPIMCPWPISource,
+)
 from pipeline.sources.nse import NSEBhavcopySource
 from pipeline.sources.rbi import RBIDBIESource
 from pipeline.sources.sebi import FIIDIISource
@@ -125,12 +130,13 @@ def create_scheduler(ch_client, pg_pool) -> BackgroundScheduler:
     """
     scheduler = BackgroundScheduler(timezone=settings.tz)
 
-    # Instantiate all Phase 1 sources
-    mospi_src = MOSPISource(
-        api_token=settings.mospi_api_token or None,
-        datagov_api_key=settings.data_gov_in_api_key or None,
-    )
-    gdp_src = MOSPIGDPSource(datagov_api_key=settings.data_gov_in_api_key)
+    # Phase 1 macro — now sourced from the MOSPI MCP server (mcp.mospi.gov.in),
+    # which is reachable from the cloud box (unlike the IP-filtered REST API).
+    # Covers CPI, WPI, IIP, and GDP with live data and no credentials.
+    mcp_cpi_src = MOSPIMCPCPISource(settings.mospi_mcp_url)
+    mcp_wpi_src = MOSPIMCPWPISource(settings.mospi_mcp_url)
+    mcp_iip_src = MOSPIMCPIIPSource(settings.mospi_mcp_url)
+    mcp_gdp_src = MOSPIMCPGDPSource(settings.mospi_mcp_url)
     rbi_rates_src = RBIRatesSource(api_key=settings.data_gov_in_api_key)
     rbi_forex_src = RBIForexSource(api_key=settings.data_gov_in_api_key)
 
@@ -159,17 +165,31 @@ def create_scheduler(ch_client, pg_pool) -> BackgroundScheduler:
             max_instances=1,
         )
 
-    # MOSPI CPI + IIP — monthly, poll window days 11–16 at 16:30 IST
-    # MOSPI releases on the 12th but sometimes delays to the 13th or 14th.
+    # MOSPI CPI (via MCP) — monthly, poll window days 11–16 at 16:30 IST.
+    # MOSPI releases CPI on the 12th but sometimes delays a day or two.
     add(
-        mospi_src,
-        "mospi_cpi_iip",
+        mcp_cpi_src,
+        "mospi_cpi",
         CronTrigger(day="11-16", hour=16, minute=30, timezone=settings.tz),
     )
 
-    # GDP — quarterly release, check end of month (28th–31st) at 10:00 IST
+    # MOSPI WPI (via MCP) — monthly, released ~14th; poll days 13–18 at 16:30.
     add(
-        gdp_src,
+        mcp_wpi_src,
+        "mospi_wpi",
+        CronTrigger(day="13-18", hour=16, minute=30, timezone=settings.tz),
+    )
+
+    # MOSPI IIP (via MCP) — monthly, released ~12th (2 months in arrears).
+    add(
+        mcp_iip_src,
+        "mospi_iip",
+        CronTrigger(day="11-16", hour=16, minute=45, timezone=settings.tz),
+    )
+
+    # GDP (via MCP) — quarterly release, check end of month (28th–31st) at 10:00.
+    add(
+        mcp_gdp_src,
         "mospi_gdp",
         CronTrigger(day="28-31", hour=10, minute=0, timezone=settings.tz),
     )

@@ -247,3 +247,28 @@ Phases 1–3 produce. Endpoints:
   credit, NPA, FII, DII) can be correlated with any other.
 - `GET /analytics/annotations` — curated macro event dates (RBI/budget/election)
   rendered as chart reference lines. Static repo-local list, not a pipeline source.
+
+---
+
+# Macro via MOSPI MCP server (0.5.0) — the live macro layer
+
+CPI, WPI, IIP, and GDP are sourced from the **MOSPI MCP server**
+(`mcp.mospi.gov.in`), a JSON-RPC service that serves official MoSPI statistics
+with no authentication. This host is reachable from the cloud box (unlike the
+IP-filtered `api.mospi.gov.in`), so it is the working macro data path.
+
+| Series | Source name | Dimensions | Granularity | MCP dataset |
+|--------|-------------|-----------|-------------|-------------|
+| `CPI_GENERAL` | `mospi_cpi` | `index_value`, `yoy_change_pct` | monthly | CPI (base 2012) |
+| `WPI_ALL_COMMODITIES` | `mospi_wpi` | `index_value` | monthly | WPI (base 2011-12) |
+| `IIP_GENERAL` | `mospi_iip` | `index_value`, `yoy_change_pct` | monthly | IIP (base 2011-12) |
+| `GDP` | `mospi_gdp` | `constant_price`, `current_price` | quarterly | NAS indicator 5 |
+| `GDP_GROWTH_RATE` | `mospi_gdp` | `yoy_change_pct` | quarterly | NAS indicator 22 |
+
+**Protocol**: POST JSON-RPC `tools/call` (tool `get_data`) → SSE response; the
+payload is at `result.content[0].text` (a JSON string) → `{data: [...rows], ...}`.
+Tags on every record include `via: "mcp"`. CPI rows also tag `sector`
+(Rural/Urban/Combined). The server's `hint` field self-documents valid filters.
+
+**Endpoints**: `GET /macro/cpi`, `/macro/wpi`, `/macro/iip`, `/macro/gdp`
+(unchanged names; `/macro/wpi` is new).

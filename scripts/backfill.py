@@ -26,17 +26,22 @@ import pipeline.store.postgres as pg_store
 from pipeline.config import settings
 from pipeline.sources.bse import BSEBhavcopySource
 from pipeline.sources.data_gov_in import RBIForexSource, RBIRatesSource
-from pipeline.sources.mospi import MOSPIGDPSource, MOSPISource
+from pipeline.sources.mospi_mcp import (
+    MOSPIMCPCPISource,
+    MOSPIMCPGDPSource,
+    MOSPIMCPIIPSource,
+    MOSPIMCPWPISource,
+)
 from pipeline.sources.nse import NSEBhavcopySource
 from pipeline.sources.rbi import RBIDBIESource
 from pipeline.sources.sebi import FIIDIISource
 
 log = structlog.get_logger()
 
-# All sources the backfill script knows about (Phase 1 macro + Phase 2 markets
-# + Phase 3 banking)
+# All sources the backfill script knows about (macro via MOSPI MCP + Phase 2
+# markets + Phase 3 banking)
 _SOURCE_NAMES = [
-    "mospi_cpi", "mospi_gdp", "rbi_rates", "rbi_forex",
+    "mospi_cpi", "mospi_wpi", "mospi_iip", "mospi_gdp", "rbi_rates", "rbi_forex",
     "nse_bhavcopy", "bse_bhavcopy", "fii_dii",
     "rbi_dbie",
 ]
@@ -45,11 +50,11 @@ _SOURCE_NAMES = [
 def _build_sources(settings) -> dict:
     """Instantiate all sources keyed by their name."""
     return {
-        "mospi_cpi": MOSPISource(
-            api_token=settings.mospi_api_token or None,
-            datagov_api_key=settings.data_gov_in_api_key or None,
-        ),
-        "mospi_gdp": MOSPIGDPSource(datagov_api_key=settings.data_gov_in_api_key),
+        # Macro via the MOSPI MCP server (live, no credentials)
+        "mospi_cpi": MOSPIMCPCPISource(settings.mospi_mcp_url),
+        "mospi_wpi": MOSPIMCPWPISource(settings.mospi_mcp_url),
+        "mospi_iip": MOSPIMCPIIPSource(settings.mospi_mcp_url),
+        "mospi_gdp": MOSPIMCPGDPSource(settings.mospi_mcp_url),
         "rbi_rates": RBIRatesSource(api_key=settings.data_gov_in_api_key),
         "rbi_forex": RBIForexSource(api_key=settings.data_gov_in_api_key),
         # Phase 2 markets — public bulk files, no credentials

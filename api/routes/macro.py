@@ -189,6 +189,31 @@ async def get_iip(
     )
 
 
+@router.get("/wpi", response_model=TimeSeriesResponse)
+async def get_wpi(
+    request: Request,
+    series: str = Query(default="WPI_ALL_COMMODITIES", description="WPI series: WPI_ALL_COMMODITIES"),
+    from_date: date = Query(default_factory=_default_from, alias="from"),
+    to_date: date = Query(default_factory=date.today, alias="to"),
+) -> TimeSeriesResponse:
+    """
+    WPI (Wholesale Price Index) time series.
+
+    Monthly all-commodities index (base year 2011-12=100), sourced live from the
+    MOSPI MCP server.  WPI measures price change at the wholesale/producer level —
+    a leading signal for retail (CPI) inflation.
+    """
+    data = _query_records(request, "mospi_wpi", series, from_date, to_date)
+    return TimeSeriesResponse(
+        series=series,
+        from_date=str(from_date),
+        to_date=str(to_date),
+        granularity="monthly",
+        unit="index_points",
+        data=data,
+    )
+
+
 @router.get("/gdp", response_model=TimeSeriesResponse)
 async def get_gdp(
     request: Request,

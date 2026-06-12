@@ -5,7 +5,7 @@
 ```mermaid
 flowchart TD
     subgraph Sources["External Data Sources"]
-        MOSPI["MOSPI API\napi.mospi.gov.in\nCPI · IIP · GDP"]
+        MOSPI["MOSPI MCP server\nmcp.mospi.gov.in\nCPI · WPI · IIP · GDP\n(REST host is IP-filtered)"]
         DATAGOV["data.gov.in API\nRBI rates · forex"]
         NSEBSE["NSE / BSE archives\nbhavcopy ZIP CSV\nOHLC · volume"]
         FIIDII["NSE FII/DII report\nnet equity flows"]
@@ -34,7 +34,7 @@ flowchart TD
         GRAF["Grafana\n:3200"]
     end
 
-    MOSPI -->|HTTP JSON| SRC
+    MOSPI -->|JSON-RPC/SSE| SRC
     DATAGOV -->|HTTP JSON| SRC
     NSEBSE -->|HTTP ZIP→CSV| SRC
     FIIDII -->|HTTP CSV| SRC

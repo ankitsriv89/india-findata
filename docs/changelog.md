@@ -4,6 +4,50 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ---
 
+## [0.5.0] — 2026-06-12
+
+### Added — Macro data unblocked via the MOSPI MCP server
+
+The Phase 1 macro sources never returned data: `api.mospi.gov.in` IP-filters the
+cloud box, and the data.gov.in resource IDs were placeholders (and the real
+data.gov.in datasets are frozen, wide-format snapshots — no repo-rate dataset
+exists at all). **Fix: source CPI/WPI/IIP/GDP from the MOSPI MCP server**
+(`mcp.mospi.gov.in`), a different host that is NOT IP-filtered and serves live
+official data with no credentials. Verified end-to-end against the live server
+(CPI/WPI to Dec 2024, IIP to 2026, GDP to 2025-26 Q2).
+
+- `pipeline/sources/mospi_mcp.py`:
+  - `MCPClient` — minimal JSON-RPC 2.0 client over the server's SSE responses
+    (`tools/call` → parse `data:` line → `result.content[0].text`)
+  - `MOSPIMCPCPISource` (`mospi_cpi`) — General CPI index + inflation, per sector
+  - `MOSPIMCPWPISource` (`mospi_wpi`) — **new series** WPI all-commodities index
+  - `MOSPIMCPIIPSource` (`mospi_iip`) — IIP General index + growth rate
+  - `MOSPIMCPGDPSource` (`mospi_gdp`) — quarterly GDP levels (indicator 5) +
+    `GDP_GROWTH_RATE` (indicator 22), the series the dashboard already queries
+- `pipeline/schema/validators.py` — `MCPDataPoint` numeric guard (skip-not-crash)
+- `pipeline/config.py` — `mospi_mcp_url` (default `https://mcp.mospi.gov.in/`)
+- `api/routes/macro.py` — new `GET /macro/wpi` endpoint for the WPI series
+
+**Wiring:** the broken `mospi.py` (REST) and `MOSPIGDPSource` (data.gov.in)
+registrations are replaced by the MCP sources in `scheduler.py` + `backfill.py`.
+Same `name` values (`mospi_cpi`/`mospi_iip`/`mospi_gdp`) so the existing
+`/macro/*` endpoints and dashboard work unchanged; `mospi_wpi` added.
+
+**Tests:** `tests/test_mospi_mcp.py` (11) run against **captured real server
+responses** (`tests/fixtures/mcp_*_response.txt`) — SSE decode, per-source field
+mapping, index+inflation/growth emission, and skip-not-crash on null/NA values.
+
+### Notes
+- 66 pytest pass, ruff clean, new code mypy-clean.
+- The old `pipeline/sources/mospi.py` and `data_gov_in.py` (MOSPI GDP) remain in
+  the tree (mospi.py still provides the `_parse_quarter_date` helper) but are no
+  longer scheduled. data.gov.in is a confirmed dead end for these series.
+- Remaining watchlist gaps (per user): forex reserves + trade deficit (→ RBI),
+  commodity prices (→ World Bank) are the next sources; an ad-hoc MCP-query layer
+  is a later phase (kept out of the cron hot path).
+
+---
+
 ## [0.4.0] — 2026-06-12
 
 ### Added
