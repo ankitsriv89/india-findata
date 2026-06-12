@@ -45,7 +45,7 @@ flowchart TD
     STORE -->|INSERT/UPDATE| PG
     API -->|SELECT FINAL| CH
     API -->|SELECT| PG
-    REACT -->|GET /macro/* · /markets/* · /banking/*| NGINX
+    REACT -->|GET /macro/* · /markets/* · /banking/* · /analytics/*| NGINX
     NGINX -->|proxy_pass| API
     API -->|Prometheus metrics| PROM
     PROM --> GRAF

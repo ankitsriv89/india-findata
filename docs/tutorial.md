@@ -323,3 +323,65 @@ they give clean `(date, number)` tuples without evaluating formulas.
 "date"/"week"/"month" as the date column and "value"/"reserves"/"credit"/… as the
 value column. It's deliberately fuzzy because DBIE's exact wording drifts — better
 to match loosely and validate the cells than to hard-code a brittle column index.
+
+---
+
+## Phase 4: Build a correlation (Analytics layer)
+
+The Correlation tab lets you ask "do inflation and the repo rate move together?"
+Here's the round trip.
+
+### 1. Pick two series
+
+`SeriesSelector` offers a catalogue spanning every layer — CPI, GDP, repo rate,
+forex, M3, credit, NPA, FII/DII. Each option carries the `source` and `series` the
+API needs. The panel defaults to CPI_GENERAL vs REPO_RATE.
+
+### 2. The API aligns and computes
+
+```bash
+curl "http://localhost:8090/analytics/correlation?\
+source_a=mospi_cpi&series_a=CPI_GENERAL&\
+source_b=rbi_rates&series_b=REPO_RATE&from=2020-01-01&to=2026-06-01"
+```
+
+`get_correlation` pulls each series as a `{date: value}` dict, intersects the
+dates, computes Pearson r and the best lag, and returns the aligned rows:
+
+```json
+{
+  "series_a": "CPI_GENERAL", "series_b": "REPO_RATE",
+  "n": 42, "pearson_r": 0.78, "best_lag": 2, "best_lag_r": 0.83,
+  "data": [{"date": "2020-01-01", "a": 150.1, "b": 5.15}, ...]
+}
+```
+
+### 3. The chart renders both axes + annotations
+
+`DualAxisChart` plots A on the left axis and B on the right (their units differ, so
+a shared axis would squash one). `useAnnotations()` overlays curated event dates as
+vertical `ReferenceLine`s — the same Recharts primitive RepoRateChart uses for its
+4% line. `CorrCoeff` shows the r badge with a strength label and the lag hint.
+
+### Try it yourself
+
+- **Find a lead/lag pair**: correlate *Bank credit growth* vs *GDP growth* and watch
+  `best_lag` — does credit lead output?
+- **Spot a spurious correlation**: pick two unrelated series over a short window and
+  see how a high r can appear by chance (the `n` badge keeps you honest).
+- **Add an event**: append a date to `_ANNOTATIONS` in `analytics.py` and it shows
+  up as a new reference line — no rebuild of the data needed.
+
+## More Python patterns explained (Phase 4)
+
+### `statistics` over numpy/pandas
+Pearson r needs only means and standard deviations. `statistics.fmean` and
+`statistics.pstdev` (population stdev — we have the whole sample, not an estimate)
+do it in stdlib. For POC-scale series this is plenty, and the explicit covariance
+loop reads like the textbook formula — better for a learning repo than a one-line
+`df.corr()` that hides the maths.
+
+### `zip(..., strict=True)`
+Pairing the two aligned series uses `zip(xs, ys, strict=True)` so that a
+length mismatch raises instead of silently truncating — a small correctness guard
+that documents the invariant "these two lists are the same length here."

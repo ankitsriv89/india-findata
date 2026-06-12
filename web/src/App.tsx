@@ -1,10 +1,10 @@
 /**
  * App.tsx — root component with tab navigation.
  *
- * Four tabs: Macro | Markets | Correlation | Pipeline
+ * Five tabs: Macro | Markets | Banking | Correlation | Pipeline
  * Active tab is stored in the URL hash so links are shareable.
- * Phase 1 implements Macro + Pipeline; Markets and Correlation show
- * a "coming soon" placeholder.
+ * All tabs render real panels (Phases 1–4); charts show empty-states
+ * until their pipeline source loads data.
  */
 
 import { useState, useEffect } from 'react'
@@ -12,6 +12,7 @@ import Layout from './components/Layout'
 import MacroPanel from './components/MacroPanel'
 import MarketsPanel from './components/MarketsPanel'
 import BankingPanel from './components/BankingPanel'
+import CorrelationPanel from './components/CorrelationPanel'
 import PipelinePanel from './components/PipelinePanel'
 import './styles/app.css'
 
@@ -50,17 +51,8 @@ export default function App() {
       {activeTab === 'macro'       && <MacroPanel />}
       {activeTab === 'markets'     && <MarketsPanel />}
       {activeTab === 'banking'     && <BankingPanel />}
-      {activeTab === 'correlation' && <ComingSoon label="Correlation" note="Phase 4 — cross-domain correlation explorer" />}
+      {activeTab === 'correlation' && <CorrelationPanel />}
       {activeTab === 'pipeline'    && <PipelinePanel />}
     </Layout>
-  )
-}
-
-function ComingSoon({ label, note }: { label: string; note: string }) {
-  return (
-    <div className="coming-soon">
-      <h2>{label}</h2>
-      <p>{note}</p>
-    </div>
   )
 }

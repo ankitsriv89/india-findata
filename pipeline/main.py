@@ -188,11 +188,12 @@ app.add_middleware(
 )
 
 # Register route modules (imported here to avoid circular imports)
-from api.routes import banking, macro, markets, pipeline_routes  # noqa: E402
+from api.routes import analytics, banking, macro, markets, pipeline_routes  # noqa: E402
 
 app.include_router(macro.router, prefix="/macro", tags=["macro"])
 app.include_router(markets.router, prefix="/markets", tags=["markets"])
 app.include_router(banking.router, prefix="/banking", tags=["banking"])
+app.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 app.include_router(pipeline_routes.router, prefix="/pipeline", tags=["pipeline"])
 
 

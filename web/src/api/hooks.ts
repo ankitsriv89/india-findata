@@ -18,6 +18,8 @@ import {
   PipelineRun,
   MoversResponse,
   HeatmapResponse,
+  CorrelationResponse,
+  Annotation,
 } from './client'
 
 // ── Date range helpers ────────────────────────────────────────────────────────
@@ -212,6 +214,53 @@ export function useNPA(from: string, to: string) {
       return data
     },
     staleTime: 5 * 60 * 1000,
+  })
+}
+
+// ── Analytics hooks (Phase 4) ─────────────────────────────────────────────────
+
+/**
+ * Correlation between two series (each identified by source+series).
+ * Disabled until all four identifiers are chosen.
+ */
+export function useCorrelation(
+  sourceA: string,
+  seriesA: string,
+  sourceB: string,
+  seriesB: string,
+  from: string,
+  to: string,
+) {
+  return useQuery<CorrelationResponse>({
+    queryKey: ['analytics', 'correlation', sourceA, seriesA, sourceB, seriesB, from, to],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/analytics/correlation', {
+        params: {
+          source_a: sourceA,
+          series_a: seriesA,
+          source_b: sourceB,
+          series_b: seriesB,
+          from,
+          to,
+        },
+      })
+      return data
+    },
+    staleTime: 5 * 60 * 1000,
+    enabled: Boolean(sourceA && seriesA && sourceB && seriesB),
+  })
+}
+
+/** Curated macro event annotations (RBI/budget/election dates). */
+export function useAnnotations() {
+  return useQuery<Annotation[]>({
+    queryKey: ['analytics', 'annotations'],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/analytics/annotations')
+      return data
+    },
+    // Static list — effectively never stale within a session.
+    staleTime: 60 * 60 * 1000,
   })
 }
 

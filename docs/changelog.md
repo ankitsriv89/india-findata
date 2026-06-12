@@ -4,6 +4,42 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ---
 
+## [0.4.0] — 2026-06-12
+
+### Added
+
+**Cross-domain analytics (Phase 4) — no new pipeline source**
+- `api/routes/analytics.py`:
+  - `GET /analytics/correlation` — pulls two series (each `source`+`series`),
+    aligns them by date (inner join), computes Pearson r in pure stdlib
+    (`statistics`, no pandas) + a best-lag scan, and returns both aligned series
+    for a dual-axis plot
+  - `GET /analytics/annotations` — curated macro event dates (demonetisation, GST,
+    COVID, RBI moves, budgets, elections) for the chart annotation layer
+- `_pearson` / `_best_lag` are pure functions (unit-tested directly, no DB)
+
+**Frontend — Correlation tab now live (replaces the placeholder)**
+- `web/src/components/CorrelationPanel.tsx`
+- `SeriesSelector.tsx` (+ `SERIES_CATALOGUE` of correlatable series across all layers)
+- `charts/DualAxisChart.tsx` (ComposedChart, two Y-axes, event ReferenceLines)
+- `CorrCoeff.tsx` (Pearson r badge: sign colour, strength label, best-lag hint)
+- `api/hooks.ts` — `useCorrelation`, `useAnnotations`
+- `App.tsx` — Correlation wired; dead `ComingSoon` placeholder removed (all five
+  tabs now render real panels)
+
+**Tests**
+- `tests/test_analytics.py` (9): perfect ±correlation, zero-variance/too-few →
+  None, mismatched lengths, moderate case, clamp to [-1,1], best-lag shift
+  detection, lag-0 for aligned series
+
+### Notes
+- 55 pytest pass, ruff clean, new Phase 4 code mypy-clean, web build green.
+- This completes the Phases 2–4 roadmap. Remaining work is the data-source access
+  problem (MOSPI IP-filtering, dead data.gov.in IDs, possibly via MCP servers) —
+  all pipeline code is real and fixture-verified, ready the moment data flows.
+
+---
+
 ## [0.3.0] — 2026-06-12
 
 ### Added

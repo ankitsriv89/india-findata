@@ -185,3 +185,33 @@ latest `fetched_at`, so a revised value transparently replaces the old one and a
 re-pull of unchanged data is a no-op. This is the [idempotency](#idempotency) and
 [data-revision](#data-revisions-scd-type-2) machinery from Phase 1, now doing real
 work on a genuinely-revising source.
+
+## Correlation and lead/lag analysis
+
+The analytics layer answers a question the per-series charts can't: *do two series
+move together?* The mechanics, all in stdlib (no pandas):
+
+1. **Align by date (inner join).** Two series rarely share every date — CPI is
+   monthly, the repo rate changes on irregular MPC dates. We intersect their date
+   keys and keep only the dates both have. If the overlap is empty (e.g. a weekly
+   series vs a quarterly one that never share a day), we return `n=0` and a null
+   r rather than inventing alignment.
+2. **Pearson r** = covariance(A,B) / (σ_A · σ_B), computed directly from
+   `statistics.fmean`/`pstdev`. It's undefined when a series is flat (zero
+   variance → no correlation possible) or has <2 points — we return `null`, never
+   a fake `0.0`. The result is clamped to [-1, 1] to absorb float rounding.
+3. **Best-lag scan.** Two series can be related with a *delay* — credit growth
+   might lead GDP, FII flows might lead the index. We slide series B against A over
+   a small lag window (±6 steps) and report the lag that maximises |r|. A non-zero
+   best lag is a hint (not proof) of a lead/lag relationship.
+
+**Why this is cheap to add:** every series already lives in one `records` table
+under the universal schema, so "correlate A with B" is two parameterised queries
+and ~20 lines of arithmetic — no per-pair pipeline, no precomputation. This is the
+architectural payoff the whole platform was built toward.
+
+**Caveat (worth teaching):** correlation is not causation, and a high r over a
+short overlap is easy to get by chance. The UI shows `n` (sample size) and a
+plain-language strength label precisely so the number isn't over-read. The event
+annotations (demonetisation, COVID, budgets) help: if a correlation is really
+driven by one shared shock, you'll see both series kink at the same reference line.

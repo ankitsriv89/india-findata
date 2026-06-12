@@ -233,3 +233,17 @@ The dashboard overlays this against GDP growth (reuses the Phase 1 `useGDP` hook
 **Quirks**: extracted from PDF tables via `pdfplumber.extract_tables()`; rows that
 aren't a `(quarter_label, numeric_ratio)` pair (headers, totals, "n/a") are skipped.
 Quarter labels use Indian-fiscal convention (`Q1 2025-26` → 2025-04-01).
+
+---
+
+# Phase 4 — Cross-domain Analytics (no new source)
+
+Phase 4 adds **no data source** — it is a pure query/compute layer over the data
+Phases 1–3 produce. Endpoints:
+
+- `GET /analytics/correlation?source_a=&series_a=&source_b=&series_b=&from=&to=`
+  — aligns two existing series by date and returns Pearson r + best-lag + the
+  aligned data. Any series in the catalogue (CPI, IIP, GDP, repo rate, forex, M3,
+  credit, NPA, FII, DII) can be correlated with any other.
+- `GET /analytics/annotations` — curated macro event dates (RBI/budget/election)
+  rendered as chart reference lines. Static repo-local list, not a pipeline source.

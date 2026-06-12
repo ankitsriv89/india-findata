@@ -57,6 +57,24 @@ export interface HeatmapResponse {
   cells: HeatmapCell[]
 }
 
+/** Correlation result + aligned data from /analytics/correlation */
+export interface CorrelationResponse {
+  series_a: string
+  series_b: string
+  n: number
+  pearson_r: number | null
+  best_lag: number
+  best_lag_r: number | null
+  data: Array<{ date: string; a: number; b: number }>
+}
+
+/** One curated macro event annotation from /analytics/annotations */
+export interface Annotation {
+  date: string
+  label: string
+  category: 'monetary' | 'fiscal' | 'political'
+}
+
 /** One pipeline run row */
 export interface PipelineRun {
   source: string

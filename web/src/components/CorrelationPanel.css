@@ -1,0 +1,96 @@
+.corr-panel__controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.corr-panel__title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.corr-panel__selectors {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.corr-panel__vs {
+  padding-bottom: 8px;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.corr-panel__chart {
+  min-height: 360px;
+}
+
+/* SeriesSelector */
+.series-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 220px;
+}
+
+.series-selector__label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.series-selector__select {
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 0.8125rem;
+}
+
+/* CorrCoeff badge */
+.corr-coeff {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  margin-bottom: 0.75rem;
+}
+
+.corr-coeff__value {
+  font-size: 2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.corr-coeff__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.corr-coeff__label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.corr-coeff__strength {
+  font-size: 0.8125rem;
+  color: var(--color-text);
+}
+
+.corr-coeff__lag {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}

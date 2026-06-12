@@ -137,3 +137,19 @@ tests/test_rbi.py ........   [ forex valid rows + fields, M3 skip-non-numeric +
                                garbage PDF → [] ]
 46 passed
 ```
+
+## Phase 4 (0.4.0) — Cross-domain Analytics
+
+No new dependencies (Pearson r is computed with the stdlib `statistics` module —
+no pandas/numpy, per CLAUDE.md). No new pipeline source.
+
+Phase 4 test output (9 new tests; 55 total):
+```
+tests/test_analytics.py .........   [ perfect ± correlation, zero-variance/too-few
+                                      → None, mismatched lengths, moderate case,
+                                      clamp [-1,1], best-lag shift, lag-0 aligned ]
+55 passed
+```
+
+Frontend build (`cd web && npm run build`): clean — 1317 modules, ~693 kB JS
+(201 kB gzip). All five tabs render real panels.
